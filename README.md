@@ -13,8 +13,7 @@ out collectively by the network. Bdtcoin Core is the name of open source
 software which enables the use of this currency.
 
 For more information, as well as an immediately usable, binary version of
-the Bdtcoin Core software, see https://bdtcoin.org/en/download/, or read the
-[original whitepaper](https://bdtcoin.org/bdtcoin.pdf).
+the Bdtcoin Core software, see https://bdtcoin.org/download/
 
 License
 -------
