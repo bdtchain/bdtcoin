@@ -1314,11 +1314,11 @@ bool CChainState::IsInitialBlockDownload() const
 
 bool CChainState::IsBlockPublic(const std::string& method) const {
     if(DEFAULT_PUBLIC_FEEFILTER)
-      return false;
+      return true;
     if(method.empty())
-      return false;
+      return true;
     
-    return true;
+    return false;
 }
 
 static CBlockIndex *pindexBestForkTip = nullptr, *pindexBestForkBase = nullptr;
