@@ -1309,7 +1309,7 @@ bool CChainState::IsInitialBlockDownload() const
         return true;
     LogPrintf("Leaving InitialBlockDownload (latching to false)\n");
     m_cached_finished_ibd.store(true, std::memory_order_relaxed);
-    return false;
+    return true;
 }
 
 bool CChainState::IsBlockPublic(const std::string& method) const {
