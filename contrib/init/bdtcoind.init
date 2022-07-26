@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+#
+#  bdtcoind The bdtcoin core server.
+#
+#
+# chkconfig: 345 80 20
+# description: bdtcoind
+# processname: bdtcoind
+#
+
+# Source function library.
+. /etc/init.d/functions
+
+# you can override defaults in /etc/sysconfig/bdtcoind, see below
+if [ -f /etc/sysconfig/bdtcoind ]; then
+        . /etc/sysconfig/bdtcoind
+fi
+
+RETVAL=0
+
+prog=bdtcoind
+# you can override the lockfile via BDTCOIND_LOCKFILE in /etc/sysconfig/bdtcoind
+lockfile=${BDTCOIND_LOCKFILE-/var/lock/subsys/bdtcoind}
+
+# bdtcoind defaults to /usr/bin/bdtcoind, override with BDTCOIND_BIN
+bdtcoind=${BDTCOIND_BIN-/usr/bin/bdtcoind}
+
+# bdtcoind opts default to -disablewallet, override with BDTCOIND_OPTS
+bdtcoind_opts=${BDTCOIND_OPTS--disablewallet}
+
+start() {
+    echo -n $"Starting $prog: "
+    daemon $DAEMONOPTS $bdtcoind $bdtcoind_opts
+    RETVAL=$?
+    echo
+    [ $RETVAL -eq 0 ] && touch $lockfile
+    return $RETVAL
+}
+
+stop() {
+    echo -n $"Stopping $prog: "
+    killproc $prog -t600
+    RETVAL=$?
+    echo
+    [ $RETVAL -eq 0 ] && rm -f $lockfile
+    return $RETVAL
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status $prog
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: service $prog {start|stop|status|restart}"
+        exit 1
+        ;;
+esac

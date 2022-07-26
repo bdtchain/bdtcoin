@@ -1,0 +1,33 @@
+# /etc/conf.d/bdtcoind: config file for /etc/init.d/bdtcoind
+
+# Config file location
+#BDTCOIND_CONFIGFILE="/etc/bdtcoin/bdtcoin.conf"
+
+# What directory to write pidfile to?  (created and owned by $BDTCOIND_USER)
+#BDTCOIND_PIDDIR="/var/run/bdtcoind"
+
+# What filename to give the pidfile
+#BDTCOIND_PIDFILE="${BDTCOIND_PIDDIR}/bdtcoind.pid"
+
+# Where to write bdtcoind data (be mindful that the blockchain is large)
+#BDTCOIND_DATADIR="/var/lib/bdtcoind"
+
+# User and group to own bdtcoind process
+#BDTCOIND_USER="bdtcoin"
+#BDTCOIND_GROUP="bdtcoin"
+
+# Path to bdtcoind executable
+#BDTCOIND_BIN="/usr/bin/bdtcoind"
+
+# Nice value to run bdtcoind under
+#BDTCOIND_NICE=0
+
+# Additional options (avoid -conf and -datadir, use flags above)
+#BDTCOIND_OPTS=""
+
+# The timeout in seconds OpenRC will wait for bdtcoind to terminate
+# after a SIGTERM has been raised.
+# Note that this will be mapped as argument to start-stop-daemon's
+# '--retry' option, which means you can specify a retry schedule
+# here. For more information see man 8 start-stop-daemon.
+BDTCOIND_SIGTERM_TIMEOUT=600

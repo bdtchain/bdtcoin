@@ -1,0 +1,92 @@
+#!/sbin/openrc-run
+
+# backward compatibility for existing gentoo layout 
+#
+if [ -d "/var/lib/bdtcoin/.bdtcoin" ]; then
+	BDTCOIND_DEFAULT_DATADIR="/var/lib/bdtcoin/.bdtcoin"
+else
+	BDTCOIND_DEFAULT_DATADIR="/var/lib/bdtcoind"
+fi
+
+BDTCOIND_CONFIGFILE=${BDTCOIND_CONFIGFILE:-/etc/bdtcoin/bdtcoin.conf}
+BDTCOIND_PIDDIR=${BDTCOIND_PIDDIR:-/var/run/bdtcoind}
+BDTCOIND_PIDFILE=${BDTCOIND_PIDFILE:-${BDTCOIND_PIDDIR}/bdtcoind.pid}
+BDTCOIND_DATADIR=${BDTCOIND_DATADIR:-${BDTCOIND_DEFAULT_DATADIR}}
+BDTCOIND_USER=${BDTCOIND_USER:-${BDTCOIN_USER:-bdtcoin}}
+BDTCOIND_GROUP=${BDTCOIND_GROUP:-bdtcoin}
+BDTCOIND_BIN=${BDTCOIND_BIN:-/usr/bin/bdtcoind}
+BDTCOIND_NICE=${BDTCOIND_NICE:-${NICELEVEL:-0}}
+BDTCOIND_OPTS="${BDTCOIND_OPTS:-${BDTCOIN_OPTS}}"
+
+name="Bdtcoin Core Daemon"
+description="Bdtcoin cryptocurrency P2P network daemon"
+
+command="/usr/bin/bdtcoind"
+command_args="-pid=\"${BDTCOIND_PIDFILE}\" \
+		-conf=\"${BDTCOIND_CONFIGFILE}\" \
+		-datadir=\"${BDTCOIND_DATADIR}\" \
+		-daemon \
+		${BDTCOIND_OPTS}"
+
+required_files="${BDTCOIND_CONFIGFILE}"
+start_stop_daemon_args="-u ${BDTCOIND_USER} \
+			-N ${BDTCOIND_NICE} -w 2000"
+pidfile="${BDTCOIND_PIDFILE}"
+
+# The retry schedule to use when stopping the daemon. Could be either
+# a timeout in seconds or multiple signal/timeout pairs (like
+# "SIGKILL/180 SIGTERM/300")
+retry="${BDTCOIND_SIGTERM_TIMEOUT}"
+
+depend() {
+	need localmount net
+}
+
+# verify
+# 1) that the datadir exists and is writable (or create it)
+# 2) that a directory for the pid exists and is writable
+# 3) ownership and permissions on the config file
+start_pre() {
+	checkpath \
+	-d \
+	--mode 0750 \
+	--owner "${BDTCOIND_USER}:${BDTCOIND_GROUP}" \
+	"${BDTCOIND_DATADIR}"
+
+	checkpath \
+	-d \
+	--mode 0755 \
+	--owner "${BDTCOIND_USER}:${BDTCOIND_GROUP}" \
+	"${BDTCOIND_PIDDIR}"
+
+	checkpath -f \
+	-o ${BDTCOIND_USER}:${BDTCOIND_GROUP} \
+	-m 0660 \
+	${BDTCOIND_CONFIGFILE}
+
+	checkconfig || return 1
+}
+
+checkconfig()
+{
+	if ! grep -qs '^rpcpassword=' "${BDTCOIND_CONFIGFILE}" ; then
+		eerror ""
+		eerror "ERROR: You must set a secure rpcpassword to run bdtcoind."
+		eerror "The setting must appear in ${BDTCOIND_CONFIGFILE}"
+		eerror ""
+		eerror "This password is security critical to securing wallets "
+		eerror "and must not be the same as the rpcuser setting."
+		eerror "You can generate a suitable random password using the following "
+		eerror "command from the shell:"
+		eerror ""
+		eerror "bash -c 'tr -dc a-zA-Z0-9 < /dev/urandom | head -c32 && echo'"
+		eerror ""
+		eerror "It is recommended that you also set alertnotify so you are "
+		eerror "notified of problems:"
+		eerror ""
+		eerror "ie: alertnotify=echo %%s | mail -s \"Bdtcoin Alert\"" \
+			"admin@foo.com"
+		eerror ""
+		return 1
+	fi
+}

@@ -1,0 +1,7 @@
+[main]
+host = https://www.transifex.com
+
+[bdtcoin.qt-translation-021x]
+file_filter = src/qt/locale/bdtcoin_<lang>.ts
+source_file = src/qt/locale/bdtcoin_en.ts
+source_lang = en
