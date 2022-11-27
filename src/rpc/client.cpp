@@ -1,4 +1,4 @@
-// Copyright (c) 2010 JUS
+// Copyright (c) 2018 Johir Uddin Sultan
 // Copyright (c) 2009-2020 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -65,6 +65,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "listtransactions", 2, "skip" },
     { "listtransactions", 3, "include_watchonly" },
     { "walletpassphrase", 1, "timeout" },
+    { "getblocktemplate", 0, "template_request" },
     { "listsinceblock", 1, "target_confirmations" },
     { "listsinceblock", 2, "include_watchonly" },
     { "listsinceblock", 3, "include_removed" },

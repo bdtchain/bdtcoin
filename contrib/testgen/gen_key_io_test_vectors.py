@@ -127,7 +127,7 @@ def is_valid(v):
 
 def is_valid_bech32(v):
     '''Check vector v for bech32 validity'''
-    for hrp in ['bdt', 'tbdt', 'rbdt']:
+    for hrp in ['bc', 'tb', 'bcrt']:
         if decode_segwit_address(hrp, v) != (None, None):
             return True
     return False

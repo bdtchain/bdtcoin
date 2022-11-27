@@ -3,7 +3,7 @@
 
 Bdtcoin Core version 0.20.0 is now available from:
 
-  <https://bdtcoin.org/bin/bdtcoin-core-0.20.0/>
+  <https://bdtcoincore.org/bin/bdtcoin-core-0.20.0/>
 
 This release includes new features, various bug fixes and performance
 improvements, as well as updated translations.
@@ -14,7 +14,7 @@ Please report bugs using the issue tracker at GitHub:
 
 To receive security and update notifications, please subscribe to:
 
-  <https://bdtcoin.org/en/list/announcements/join/>
+  <https://bdtcoincore.org/en/list/announcements/join/>
 
 How to Upgrade
 ==============
@@ -206,7 +206,7 @@ GUI changes
   peer selection. See the `-asmap` configuration option in _New
   Settings_, above.  (#18402)
 
-- A "known bug" [announced](https://bdtcoin.org/en/releases/0.18.0/#wallet-gui)
+- A "known bug" [announced](https://bdtcoincore.org/en/releases/0.18.0/#wallet-gui)
   in the release notes of version 0.18 has been fixed.  The issue
   affected anyone who simultaneously used multiple Bdtcoin Core wallets
   and the GUI coin control feature. (#18894)
@@ -247,7 +247,7 @@ Documentation changes
 ---------------------
 
 - Bdtcoin Core's automatically-generated source code documentation is
-  now available at https://doxygen.bdtcoin.org.  (#17596)
+  now available at https://doxygen.bdtcoincore.org.  (#17596)
 
 Low-level changes
 =================
@@ -433,7 +433,7 @@ Build system
 - #18346 Document an RPCResult for all calls; Enforce at compile time (MarcoFalke)
 - #18396 Add missing HelpExampleRpc for getblockfilter (theStack)
 - #18398 Fix broken RPCExamples for waitforblock(height) (theStack)
-- #18444 Remove final comma for last entry of fixed-size arrays/objects in RPCResult (luke-jr)
+- #17993 Remove final comma for last entry of fixed-size arrays/objects in RPCResult (luke-jr)
 - #18459 Remove unused getbalances() code (jonatack)
 - #18484 Correctly compute redeemScript from witnessScript for signrawtransaction (achow101)
 - #18487 Fix rpcRunLater race in walletpassphrase (promag)
@@ -596,7 +596,7 @@ Build system
 - #16973 Fix `combine_logs.py` for AppVeyor build (mzumsande)
 - #16975 Show debug log on unit test failure (MarcoFalke)
 - #16978 Seed test RNG context for each test case, print seed (MarcoFalke)
-- #17009, #17018, #17050, #17051, #17071, #17076, #17083, #17093, #17109, #17113, #17136, #17229, #17291, #17357, #17771, #17777, #17917, #17926, #17972, #17989, #17996, #18009, #18029, #18047, #18126, #18176, #18206, #18353, #18363, #18407, #18417, #18423, #18445, #18455, #18565 Add fuzzing harnesses (practicalswift)
+- #17009, #17018, #17050, #17051, #17071, #17076, #17083, #17093, #17109, #17113, #17136, #17229, #17291, #17357, #17771, #17777, #17917, #17926, #17972, #17989, #17996, #18009, #18029, #18047, #18126, #18176, #18206, #18353, #18363, #18407, #18417, #18423, #17995, #18455, #18565 Add fuzzing harnesses (practicalswift)
 - #17011 ci: Use busybox utils for one build (MarcoFalke)
 - #17030 Fix Python Docstring to include all Args (jbampton)
 - #17041 ci: Run tests on arm (MarcoFalke)
@@ -711,7 +711,7 @@ Build system
 - #18311 Bumpfee test fix (instagibbs)
 - #18314 Add deserialization fuzzing of SnapshotMetadata (`utxo_snapshot`) (practicalswift)
 - #18319 fuzz: Add missing `ECC_Start` to `key_io` test (MarcoFalke)
-- #18334 Add basic test for BIP 37 (MarcoFalke)
+- #17399 Add basic test for BIP 37 (MarcoFalke)
 - #18350 Fix mining to an invalid target + ensure that a new block has the correct hash internally (TheQuantumPhysicist)
 - #18378 Bugfix & simplify bn2vch using `int.to_bytes` (sipa)
 - #18393 Don't assume presence of `__builtin_mul_overflow(…)` in `MultiplicationOverflow(…)` fuzzing harness (practicalswift)
@@ -775,7 +775,7 @@ Build system
 - #17503 Remove bitness from bdtcoin-qt help message and manpage (laanwj)
 - #17539 Update and improve Developer Notes (hebasto)
 - #17561 Changed MiniUPnPc link to https in dependencies.md (sandakersmann)
-- #17596 Change doxygen URL to doxygen.bdtcoin.org (laanwj)
+- #17596 Change doxygen URL to doxygen.bdtcoincore.org (laanwj)
 - #17598 Update release process with latest changes (MarcoFalke)
 - #17617 Unify unix epoch time descriptions (jonatack)
 - #17637 script: Add keyserver to verify-commits readme (emilengler)

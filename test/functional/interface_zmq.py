@@ -510,7 +510,7 @@ class ZMQTest (BdtcoinTestFramework):
         # Set up two subscribers with different addresses
         subscribers = []
         for i in range(2):
-            address = 'tcp://127.0.0.1:%d' % (28334 + i)
+            address = 'tcp://127.0.0.1:%d' % (27399 + i)
             socket = self.ctx.socket(zmq.SUB)
             socket.set(zmq.RCVTIMEO, 60000)
             hashblock = ZMQSubscriber(socket, b"hashblock")

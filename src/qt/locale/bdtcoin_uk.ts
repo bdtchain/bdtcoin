@@ -807,7 +807,7 @@ Signing is only possible with addresses of the type 'legacy'.</source>
         <translation>Ця позначка стане червоною, якщо будь-який отримувач отримає суму, меншу за поточний поріг пилу.</translation>
     </message>
     <message>
-        <source>Can vary +/- %1 satoshi(s) per input.</source>
+        <source>Can vary +/- %1 jus(s) per input.</source>
         <translation>Може відрізнятися на +/- %1 сатоші за введені</translation>
     </message>
     <message>
@@ -2408,7 +2408,7 @@ Signing is only possible with addresses of the type 'legacy'.</source>
     <message>
         <source>Specify a custom fee per kB (1,000 bytes) of the transaction's virtual size.
 
-Note:  Since the fee is calculated on a per-byte basis, a fee of "100 satoshis per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 satoshis.</source>
+Note:  Since the fee is calculated on a per-byte basis, a fee of "100 juss per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 juss.</source>
         <translation>Вкажіть комісію за кБ (1000 байт) віртуального розміру транзакції.
 
 Примітка: Оскільки комісія нараховується за байт, комісія "100 сатоші за кБ" для транзакції розміром 500 байт (половина 1 кБ) в результаті дасть комісію тільки 50 сатоші.</translation>

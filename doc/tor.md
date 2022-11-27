@@ -55,12 +55,12 @@ config file): *Needed for Tor version 0.2.7.0 and older versions of Tor only. Fo
 versions of Tor see [Section 3](#3-automatically-listen-on-tor).*
 
 	HiddenServiceDir /var/lib/tor/bdtcoin-service/
-	HiddenServicePort 7393 127.0.0.1:7334
-	HiddenServicePort 17393 127.0.0.1:18334
+	HiddenServicePort 7393 127.0.0.1:7399
+	HiddenServicePort 17393 127.0.0.1:17399
 
 The directory can be different of course, but virtual port numbers should be equal to
 your bdtcoind's P2P listen port (7393 by default), and target addresses and ports
-should be equal to binding address and port for inbound Tor connections (127.0.0.1:7334 by default).
+should be equal to binding address and port for inbound Tor connections (127.0.0.1:7399 by default).
 
 	-externalip=X   You can tell bdtcoin about its publicly reachable addresses using
 	                this option, and this can be an onion address. Given the above

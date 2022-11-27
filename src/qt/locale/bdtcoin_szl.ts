@@ -665,8 +665,8 @@
         <translation>Ta etyketa stŏwŏ sie czyrwōnŏ jeźli keryś z ôdbiyrŏczy dostŏwŏ kwotã myńszõ aniżeli terŏźny prōg sztaubu.</translation>
     </message>
     <message>
-        <source>Can vary +/- %1 satoshi(s) per input.</source>
-        <translation>Chwiyrŏ sie +/- %1 satoshi na wchōd.</translation>
+        <source>Can vary +/- %1 jus(s) per input.</source>
+        <translation>Chwiyrŏ sie +/- %1 jus na wchōd.</translation>
     </message>
     <message>
         <source>(no label)</source>

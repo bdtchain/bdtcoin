@@ -69,8 +69,8 @@ for host in ${HOSTS=x86_64-linux-gnu arm-linux-gnueabihf aarch64-linux-gnu riscv
         #
         #     When --container is specified, the default behavior is to share
         #     the current working directory with the isolated container at the
-        #     same exact path (e.g. mapping '/home/satoshi/bdtcoin/' to
-        #     '/home/satoshi/bdtcoin/'). This means that the $PWD inside the
+        #     same exact path (e.g. mapping '/home/jus/bdtcoin/' to
+        #     '/home/jus/bdtcoin/'). This means that the $PWD inside the
         #     container becomes a source of irreproducibility. --no-cwd disables
         #     this behaviour.
         #

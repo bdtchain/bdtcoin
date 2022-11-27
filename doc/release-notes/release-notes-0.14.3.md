@@ -11,7 +11,7 @@ Please report bugs using the issue tracker at github:
 
 To receive security and update notifications, please subscribe to:
 
-  <https://bdtcoin.org/en/list/announcements/join/>
+  <https://bdtcoincore.org/en/list/announcements/join/>
 
 Compatibility
 ==============

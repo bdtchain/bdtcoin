@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 JUS
+// Copyright (c) 2009-2010 Johir Uddin Sultan
 // Copyright (c) 2009-2020 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -91,9 +91,9 @@ static const bool DEFAULT_WALLETBROADCAST = true;
 static const bool DEFAULT_DISABLE_WALLET = false;
 //! -maxtxfee default
 constexpr CAmount DEFAULT_TRANSACTION_MAXFEE{COIN / 10};
-//! Discourage users to set fees higher than this amount (in satoshis) per kB
+//! Discourage users to set fees higher than this amount (in juss) per kB
 constexpr CAmount HIGH_TX_FEE_PER_KB{COIN / 100};
-//! -maxtxfee will warn if called with a higher fee than this amount (in satoshis)
+//! -maxtxfee will warn if called with a higher fee than this amount (in juss)
 constexpr CAmount HIGH_MAX_TX_FEE{100 * HIGH_TX_FEE_PER_KB};
 
 //! Pre-calculated constants for input size estimation in *virtual size*
@@ -1030,7 +1030,7 @@ public:
      * CWallet::TransactionChangeType for details).
      */
     Optional<OutputType> m_default_change_type{};
-    /** Absolute maximum transaction fee (in satoshis) used by default for the wallet */
+    /** Absolute maximum transaction fee (in juss) used by default for the wallet */
     CAmount m_default_max_tx_fee{DEFAULT_TRANSACTION_MAXFEE};
 
     size_t KeypoolCountExternalKeys() const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);

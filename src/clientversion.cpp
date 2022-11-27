@@ -12,7 +12,7 @@
  * for both bdtcoind and bdtcoin-qt, to make it harder for attackers to
  * target servers or GUI users specifically.
  */
-const std::string CLIENT_NAME("JUS");
+const std::string CLIENT_NAME("Jus");
 
 
 #ifdef HAVE_BUILD_INFO

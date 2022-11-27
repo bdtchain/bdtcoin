@@ -16,7 +16,7 @@ pkg_add autoconf # (select highest version, e.g. 2.69)
 pkg_add automake # (select highest version, e.g. 1.16)
 pkg_add python # (select highest version, e.g. 3.8)
 
-git clone https://github.com/bdtchain/bdtcoin.git
+git clone https://github.com/bdtcoin/bdtcoin.git
 ```
 
 See [dependencies.md](dependencies.md) for a complete overview.

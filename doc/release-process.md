@@ -64,7 +64,7 @@ Check out the source code in the following directory hierarchy.
     git clone https://github.com/bdtcoin-core/gitian.sigs.git
     git clone https://github.com/bdtcoin-core/bdtcoin-detached-sigs.git
     git clone https://github.com/devrandom/gitian-builder.git
-    git clone https://github.com/bdtchain/bdtcoin.git
+    git clone https://github.com/bdtcoin/bdtcoin.git
 
 ### Write the release notes
 
@@ -318,12 +318,12 @@ bdtcoin.org (see below for bdtcoin.org update instructions).
 
 - Update other repositories and websites for new version
 
-  - bdtcoin.org blog post
+  - bdtcoincore.org blog post
 
-  - bdtcoin.org maintained versions update:
-    [table](https://github.com/bdtcoin-core/bdtcoin.org/commits/master/_includes/posts/maintenance-table.md)
+  - bdtcoincore.org maintained versions update:
+    [table](https://github.com/bdtcoin-core/bdtcoincore.org/commits/master/_includes/posts/maintenance-table.md)
 
-  - bdtcoin.org RPC documentation update
+  - bdtcoincore.org RPC documentation update
 
   - Update packaging repo
 
@@ -360,7 +360,7 @@ bdtcoin.org (see below for bdtcoin.org update instructions).
 
   - bdtcoin-dev and bdtcoin-core-dev mailing list
 
-  - Bdtcoin Core announcements list https://bdtcoin.org/en/list/announcements/join/
+  - Bdtcoin Core announcements list https://bdtcoincore.org/en/list/announcements/join/
 
   - Update title of #bdtcoin on Freenode IRC
 

@@ -729,8 +729,8 @@
         <translation>Ši etiketė tampa raudona, jei bet kuris gavėjas gauna mažesnę sumą nei dabartinė dulkių slenkstis.</translation>
     </message>
     <message>
-        <source>Can vary +/- %1 satoshi(s) per input.</source>
-        <translation>Gali svyruoti nuo +/-%1 satoshi(-ų) vienam įvedimui.</translation>
+        <source>Can vary +/- %1 jus(s) per input.</source>
+        <translation>Gali svyruoti nuo +/-%1 jus(-ų) vienam įvedimui.</translation>
     </message>
     <message>
         <source>(no label)</source>
@@ -2110,7 +2110,7 @@
     <message>
         <source>Specify a custom fee per kB (1,000 bytes) of the transaction's virtual size.
 
-Note:  Since the fee is calculated on a per-byte basis, a fee of "100 satoshis per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 satoshis.</source>
+Note:  Since the fee is calculated on a per-byte basis, a fee of "100 juss per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 juss.</source>
         <translation>Nurodykite individualų mokestį už kB (1000 baitų) nuo sandorio virtualaus dydžio.
 
 Pastaba: Kadangi mokestis apskaičiuojamas pagal baitą, mokestis už „100 satošių per kB“ už 500 baitų (pusę 1 kB) sandorio dydžio galiausiai sudarytų tik 50 satošių mokestį.</translation>

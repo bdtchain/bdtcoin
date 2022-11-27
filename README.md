@@ -1,7 +1,7 @@
 Bdtcoin Core integration/staging tree
 =====================================
 
-https://bdtcoin.org
+https://bdtcoincore.org
 
 What is Bdtcoin?
 ----------------
@@ -13,7 +13,8 @@ out collectively by the network. Bdtcoin Core is the name of open source
 software which enables the use of this currency.
 
 For more information, as well as an immediately usable, binary version of
-the Bdtcoin Core software, see https://bdtcoin.org/download/
+the Bdtcoin Core software, see https://bdtcoincore.org/en/download/, or read the
+[original whitepaper](https://bdtcoincore.org/bdtcoin.pdf).
 
 License
 -------
@@ -28,8 +29,8 @@ The `master` branch is regularly built (see `doc/build-*.md` for instructions) a
 completely stable. [Tags](https://github.com/bdtcoin/bdtcoin/tags) are created
 regularly from release branches to indicate new official, stable release versions of Bdtcoin Core.
 
-The https://github.com/bdtchain/bdtcoin repository is used exclusively for the
-development of the GUI. Its main branch is identical in all monotree
+The https://github.com/bdtcoin-core/gui repository is used exclusively for the
+development of the GUI. Its master branch is identical in all monotree
 repositories. Release branches and tags do not exist, so please do not fork
 that repository unless it is for development reasons.
 
@@ -68,7 +69,7 @@ Translations
 ------------
 
 Changes to translations as well as new translations can be submitted to
-[Bdtcoin Core's Transifex page]
+[Bdtcoin Core's Transifex page](https://www.transifex.com/bdtcoin/bdtcoin/).
 
 Translations are periodically pulled from Transifex and merged into the git repository. See the
 [translation process](doc/translation_process.md) for details on how this works.
@@ -76,3 +77,4 @@ Translations are periodically pulled from Transifex and merged into the git repo
 **Important**: We do not accept translation changes as GitHub pull requests because the next
 pull from Transifex would automatically overwrite them again.
 
+Translators should also subscribe to the [mailing list](https://groups.google.com/forum/#!forum/bdtcoin-translators).

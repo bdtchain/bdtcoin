@@ -807,8 +807,8 @@ E' possibile firmare solo con indirizzi di tipo "legacy".</translation>
         <translation>Questa etichetta diventerà rossa se uno qualsiasi dei destinatari riceverà un importo inferiore alla corrente soglia minima per la movimentazione della valuta.</translation>
     </message>
     <message>
-        <source>Can vary +/- %1 satoshi(s) per input.</source>
-        <translation>Può variare di +/- %1 satoshi per input.</translation>
+        <source>Can vary +/- %1 jus(s) per input.</source>
+        <translation>Può variare di +/- %1 jus per input.</translation>
     </message>
     <message>
         <source>(no label)</source>
@@ -2409,10 +2409,10 @@ Per specificare più URL separarli con una barra verticale "|".</translation>
     <message>
         <source>Specify a custom fee per kB (1,000 bytes) of the transaction's virtual size.
 
-Note:  Since the fee is calculated on a per-byte basis, a fee of "100 satoshis per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 satoshis.</source>
+Note:  Since the fee is calculated on a per-byte basis, a fee of "100 juss per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 juss.</source>
         <translation>Specifica una tariffa personalizzata per kB (1.000 byte) della dimensione virtuale della transazione
 
-Nota: poiché la commissione è calcolata su base per byte, una commissione di "100 satoshi per kB" per una dimensione di transazione di 500 byte (metà di 1 kB) alla fine produrrà una commissione di soli 50 satoshi.</translation>
+Nota: poiché la commissione è calcolata su base per byte, una commissione di "100 jus per kB" per una dimensione di transazione di 500 byte (metà di 1 kB) alla fine produrrà una commissione di soli 50 jus.</translation>
     </message>
     <message>
         <source>per kilobyte</source>

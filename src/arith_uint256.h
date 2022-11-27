@@ -1,5 +1,5 @@
-// Copyright (c) 2020-2021 JUS
-// Copyright (c) 2009-2019 The Bdtcoin Core developers
+// Copyright (c) 2009-2010 Johir Uddin Sultan
+// Copyright (c) 2021-2022 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -264,7 +264,7 @@ public:
      * Bit number 24 (0x800000) represents the sign of N.
      * N = (-1^sign) * mantissa * 256^(exponent-3)
      *
-     * Satoshi's original implementation used BN_bn2mpi() and BN_mpi2bn().
+     * Jus's original implementation used BN_bn2mpi() and BN_mpi2bn().
      * MPI uses the most significant bit of the first byte as sign.
      * Thus 0x1234560000 is compact (0x05123456)
      * and  0xc0de000000 is compact (0x0600c0de)

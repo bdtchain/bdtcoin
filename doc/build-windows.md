@@ -72,7 +72,7 @@ If you want to build the windows installer with `make deploy` you need [NSIS](ht
 
 Acquire the source in the usual way:
 
-    git clone https://github.com/bdtchain/bdtcoin.git
+    git clone https://github.com/bdtcoin/bdtcoin.git
     cd bdtcoin
 
 ## Building for 64-bit Windows

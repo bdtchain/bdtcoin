@@ -1,5 +1,5 @@
-// Copyright (c) 2020-2021 JUS
-// Copyright (c) 2009-2019 The Bdtcoin Core developers
+// Copyright (c) 2009-2010 Johir Uddin Sultan
+// Copyright (c) 2021-2022 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -21,7 +21,7 @@ void memory_cleanse(void *ptr, size_t len)
 
     /* Memory barrier that scares the compiler away from optimizing out the memset.
      *
-     * Quoting Adam Langley <agl@google.com> in commit ad1907fe73934d6c696c8539646c21b11178f20f
+     * Quoting Adam Langley <agl@google.com> in commit ad1907fe73334d6c696c8539646c21b11178f20f
      * in BoringSSL (ISC License):
      *    As best as we can tell, this is sufficient to break any optimisations that
      *    might try to eliminate "superfluous" memsets.

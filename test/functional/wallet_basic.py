@@ -158,7 +158,7 @@ class WalletTest(BdtcoinTestFramework):
         self.nodes[1].generate(100)
         self.sync_all(self.nodes[0:3])
 
-        # node0 should end up with 100 bdtc in block rewards plus fees, but
+        # node0 should end up with 100 btc in block rewards plus fees, but
         # minus the 21 plus fees sent to node2
         assert_equal(self.nodes[0].getbalance(), 100 - 21)
         assert_equal(self.nodes[2].getbalance(), 21)
@@ -232,15 +232,15 @@ class WalletTest(BdtcoinTestFramework):
 
         self.log.info("Test sendmany with fee_rate param (explicit fee rate in sat/vB)")
         fee_rate_sat_vb = 2
-        fee_rate_bdtc_kvb = fee_rate_sat_vb * 1e3 / 1e8
-        explicit_fee_rate_bdtc_kvb = Decimal(fee_rate_bdtc_kvb) / 1000
+        fee_rate_btc_kvb = fee_rate_sat_vb * 1e3 / 1e8
+        explicit_fee_rate_btc_kvb = Decimal(fee_rate_btc_kvb) / 1000
 
         # Test passing fee_rate as a string
         txid = self.nodes[2].sendmany(amounts={address: 10}, fee_rate=str(fee_rate_sat_vb))
         self.nodes[2].generate(1)
         self.sync_all(self.nodes[0:3])
         balance = self.nodes[2].getbalance()
-        node_2_bal = self.check_fee_amount(balance, node_2_bal - Decimal('10'), explicit_fee_rate_bdtc_kvb, self.get_vsize(self.nodes[2].gettransaction(txid)['hex']))
+        node_2_bal = self.check_fee_amount(balance, node_2_bal - Decimal('10'), explicit_fee_rate_btc_kvb, self.get_vsize(self.nodes[2].gettransaction(txid)['hex']))
         assert_equal(balance, node_2_bal)
         node_0_bal += Decimal('10')
         assert_equal(self.nodes[0].getbalance(), node_0_bal)
@@ -251,7 +251,7 @@ class WalletTest(BdtcoinTestFramework):
         self.nodes[2].generate(1)
         self.sync_all(self.nodes[0:3])
         balance = self.nodes[2].getbalance()
-        node_2_bal = self.check_fee_amount(balance, node_2_bal - amount, explicit_fee_rate_bdtc_kvb, self.get_vsize(self.nodes[2].gettransaction(txid)['hex']))
+        node_2_bal = self.check_fee_amount(balance, node_2_bal - amount, explicit_fee_rate_btc_kvb, self.get_vsize(self.nodes[2].gettransaction(txid)['hex']))
         assert_equal(balance, node_2_bal)
         node_0_bal += amount
         assert_equal(self.nodes[0].getbalance(), node_0_bal)
@@ -273,7 +273,7 @@ class WalletTest(BdtcoinTestFramework):
         for target, mode in product([-1, 0, 1009], ["economical", "conservative"]):
             assert_raises_rpc_error(-8, "Invalid conf_target, must be between 1 and 1008",  # max value of 1008 per src/policy/fees.h
                 self.nodes[2].sendmany, amounts={address: 1}, conf_target=target, estimate_mode=mode)
-        for target, mode in product([-1, 0], ["bdtc/kb", "sat/b"]):
+        for target, mode in product([-1, 0], ["btc/kb", "sat/b"]):
             assert_raises_rpc_error(-8, 'Invalid estimate_mode parameter, must be one of: "unset", "economical", "conservative"',
                 self.nodes[2].sendmany, amounts={address: 1}, conf_target=target, estimate_mode=mode)
 
@@ -416,7 +416,7 @@ class WalletTest(BdtcoinTestFramework):
             address = self.nodes[1].getnewaddress()
             amount = 3
             fee_rate_sat_vb = 2
-            fee_rate_bdtc_kvb = fee_rate_sat_vb * 1e3 / 1e8
+            fee_rate_btc_kvb = fee_rate_sat_vb * 1e3 / 1e8
             # Test passing fee_rate as an integer
             txid = self.nodes[2].sendtoaddress(address=address, amount=amount, fee_rate=fee_rate_sat_vb)
             tx_size = self.get_vsize(self.nodes[2].gettransaction(txid)['hex'])
@@ -424,12 +424,12 @@ class WalletTest(BdtcoinTestFramework):
             self.sync_all(self.nodes[0:3])
             postbalance = self.nodes[2].getbalance()
             fee = prebalance - postbalance - Decimal(amount)
-            assert_fee_amount(fee, tx_size, Decimal(fee_rate_bdtc_kvb))
+            assert_fee_amount(fee, tx_size, Decimal(fee_rate_btc_kvb))
 
             prebalance = self.nodes[2].getbalance()
             amount = Decimal("0.001")
             fee_rate_sat_vb = 1.23
-            fee_rate_bdtc_kvb = fee_rate_sat_vb * 1e3 / 1e8
+            fee_rate_btc_kvb = fee_rate_sat_vb * 1e3 / 1e8
             # Test passing fee_rate as a string
             txid = self.nodes[2].sendtoaddress(address=address, amount=amount, fee_rate=str(fee_rate_sat_vb))
             tx_size = self.get_vsize(self.nodes[2].gettransaction(txid)['hex'])
@@ -437,7 +437,7 @@ class WalletTest(BdtcoinTestFramework):
             self.sync_all(self.nodes[0:3])
             postbalance = self.nodes[2].getbalance()
             fee = prebalance - postbalance - amount
-            assert_fee_amount(fee, tx_size, Decimal(fee_rate_bdtc_kvb))
+            assert_fee_amount(fee, tx_size, Decimal(fee_rate_btc_kvb))
 
             for key in ["totalFee", "feeRate"]:
                 assert_raises_rpc_error(-8, "Unknown named parameter key", self.nodes[2].sendtoaddress, address=address, amount=1, fee_rate=1, key=1)
@@ -456,7 +456,7 @@ class WalletTest(BdtcoinTestFramework):
             for target, mode in product([-1, 0, 1009], ["economical", "conservative"]):
                 assert_raises_rpc_error(-8, "Invalid conf_target, must be between 1 and 1008",  # max value of 1008 per src/policy/fees.h
                     self.nodes[2].sendtoaddress, address=address, amount=1, conf_target=target, estimate_mode=mode)
-            for target, mode in product([-1, 0], ["bdtc/kb", "sat/b"]):
+            for target, mode in product([-1, 0], ["btc/kb", "sat/b"]):
                 assert_raises_rpc_error(-8, 'Invalid estimate_mode parameter, must be one of: "unset", "economical", "conservative"',
                     self.nodes[2].sendtoaddress, address=address, amount=1, conf_target=target, estimate_mode=mode)
 

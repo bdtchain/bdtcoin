@@ -806,8 +806,8 @@ Signing is only possible with addresses of the type 'legacy'.</source>
         <translation>Label ini akan menjadi merah apabila penerima menerima jumlah yang lebih kecil daripada ambang habuk semasa.</translation>
     </message>
     <message>
-        <source>Can vary +/- %1 satoshi(s) per input.</source>
-        <translation>Dapat bervariasi +/- %1 satoshi per input.</translation>
+        <source>Can vary +/- %1 jus(s) per input.</source>
+        <translation>Dapat bervariasi +/- %1 jus per input.</translation>
     </message>
     <message>
         <source>(no label)</source>
@@ -2401,10 +2401,10 @@ Signing is only possible with addresses of the type 'legacy'.</source>
     <message>
         <source>Specify a custom fee per kB (1,000 bytes) of the transaction's virtual size.
 
-Note:  Since the fee is calculated on a per-byte basis, a fee of "100 satoshis per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 satoshis.</source>
+Note:  Since the fee is calculated on a per-byte basis, a fee of "100 juss per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 juss.</source>
         <translation>Tentukan biaya khusus per kB (1.000 byte) dari ukuran transaksi maya.
 
-Catatan: Karena biaya dihitung berdasarkan per byte, biaya "100 satoshi per kB" untuk ukuran transaksi 500 byte (setengah dari 1 kB) pada akhirnya akan menghasilkan biaya hanya 50 satoshi.</translation>
+Catatan: Karena biaya dihitung berdasarkan per byte, biaya "100 jus per kB" untuk ukuran transaksi 500 byte (setengah dari 1 kB) pada akhirnya akan menghasilkan biaya hanya 50 jus.</translation>
     </message>
     <message>
         <source>per kilobyte</source>

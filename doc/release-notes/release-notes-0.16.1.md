@@ -1,6 +1,6 @@
 Bdtcoin Core version 0.16.1 is now available from:
 
-  <https://bdtcoin.org/bin/bdtcoin-core-0.16.1/>
+  <https://bdtcoincore.org/bin/bdtcoin-core-0.16.1/>
 
 This is a new minor version release, with various bugfixes
 as well as updated translations.
@@ -11,7 +11,7 @@ Please report bugs using the issue tracker at GitHub:
 
 To receive security and update notifications, please subscribe to:
 
-  <https://bdtcoin.org/en/list/announcements/join/>
+  <https://bdtcoincore.org/en/list/announcements/join/>
 
 How to Upgrade
 ==============

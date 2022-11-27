@@ -1,1 +1,6 @@
-161.97.137.75:7393
+2.39.173.126:7393
+
+[2001:19f0:6001:306f:ec4:7aff:fe8f:66ec]:7393
+
+xgjdua2ozp7mjw2w47eylrnfqdn6xtevujbqrqdnmomgvex5omyhdaqd.onion:7393
+
