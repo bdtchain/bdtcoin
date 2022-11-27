@@ -1,5 +1,5 @@
-// Copyright (c) 2020-2021 JUS
-// Copyright (c) 2009-2019 The Bdtcoin Core developers
+// Copyright (c) 2009-2010 Johir Uddin Sultan
+// Copyright (c) 2021-2022 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -24,24 +24,24 @@ enum class FeeEstimateMode {
 };
 
 /**
- * Fee rate in satoshis per kilobyte: CAmount / kB
+ * Fee rate in juss per kilobyte: CAmount / kB
  */
 class CFeeRate
 {
 private:
-    CAmount nSatoshisPerK; // unit is satoshis-per-1,000-bytes
+    CAmount nJussPerK; // unit is juss-per-1,000-bytes
 
 public:
-    /** Fee rate of 0 satoshis per kB */
-    CFeeRate() : nSatoshisPerK(0) { }
+    /** Fee rate of 0 juss per kB */
+    CFeeRate() : nJussPerK(0) { }
     template<typename I>
-    explicit CFeeRate(const I _nSatoshisPerK): nSatoshisPerK(_nSatoshisPerK) {
+    explicit CFeeRate(const I _nJussPerK): nJussPerK(_nJussPerK) {
         // We've previously had bugs creep in from silent double->int conversion...
         static_assert(std::is_integral<I>::value, "CFeeRate should be used without floats");
     }
-    /** Constructor for a fee rate in satoshis per kvB (sat/kvB). The size in bytes must not exceed (2^63 - 1).
+    /** Constructor for a fee rate in juss per kvB (sat/kvB). The size in bytes must not exceed (2^63 - 1).
      *
-     *  Passing an nBytes value of COIN (1e8) returns a fee rate in satoshis per vB (sat/vB),
+     *  Passing an nBytes value of COIN (1e8) returns a fee rate in juss per vB (sat/vB),
      *  e.g. (nFeePaid * 1e8 / 1e3) == (nFeePaid / 1e5),
      *  where 1e5 is the ratio to convert from BDTC/kvB to sat/vB.
      *
@@ -51,23 +51,23 @@ public:
      */
     CFeeRate(const CAmount& nFeePaid, size_t nBytes);
     /**
-     * Return the fee in satoshis for the given size in bytes.
+     * Return the fee in juss for the given size in bytes.
      */
     CAmount GetFee(size_t nBytes) const;
     /**
-     * Return the fee in satoshis for a size of 1000 bytes
+     * Return the fee in juss for a size of 1000 bytes
      */
     CAmount GetFeePerK() const { return GetFee(1000); }
-    friend bool operator<(const CFeeRate& a, const CFeeRate& b) { return a.nSatoshisPerK < b.nSatoshisPerK; }
-    friend bool operator>(const CFeeRate& a, const CFeeRate& b) { return a.nSatoshisPerK > b.nSatoshisPerK; }
-    friend bool operator==(const CFeeRate& a, const CFeeRate& b) { return a.nSatoshisPerK == b.nSatoshisPerK; }
-    friend bool operator<=(const CFeeRate& a, const CFeeRate& b) { return a.nSatoshisPerK <= b.nSatoshisPerK; }
-    friend bool operator>=(const CFeeRate& a, const CFeeRate& b) { return a.nSatoshisPerK >= b.nSatoshisPerK; }
-    friend bool operator!=(const CFeeRate& a, const CFeeRate& b) { return a.nSatoshisPerK != b.nSatoshisPerK; }
-    CFeeRate& operator+=(const CFeeRate& a) { nSatoshisPerK += a.nSatoshisPerK; return *this; }
+    friend bool operator<(const CFeeRate& a, const CFeeRate& b) { return a.nJussPerK < b.nJussPerK; }
+    friend bool operator>(const CFeeRate& a, const CFeeRate& b) { return a.nJussPerK > b.nJussPerK; }
+    friend bool operator==(const CFeeRate& a, const CFeeRate& b) { return a.nJussPerK == b.nJussPerK; }
+    friend bool operator<=(const CFeeRate& a, const CFeeRate& b) { return a.nJussPerK <= b.nJussPerK; }
+    friend bool operator>=(const CFeeRate& a, const CFeeRate& b) { return a.nJussPerK >= b.nJussPerK; }
+    friend bool operator!=(const CFeeRate& a, const CFeeRate& b) { return a.nJussPerK != b.nJussPerK; }
+    CFeeRate& operator+=(const CFeeRate& a) { nJussPerK += a.nJussPerK; return *this; }
     std::string ToString(const FeeEstimateMode& fee_estimate_mode = FeeEstimateMode::BDTC_KVB) const;
 
-    SERIALIZE_METHODS(CFeeRate, obj) { READWRITE(obj.nSatoshisPerK); }
+    SERIALIZE_METHODS(CFeeRate, obj) { READWRITE(obj.nJussPerK); }
 };
 
 #endif //  BDTCOIN_POLICY_FEERATE_H

@@ -770,7 +770,7 @@
         <translation>நடப்பு தூசி நிலையை விட குறைவான அளவு பெறுநரை பெறுமானால் இந்த லேபிள் சிவப்பு நிறமாக மாறும்.</translation>
     </message>
     <message>
-        <source>Can vary +/- %1 satoshi(s) per input.</source>
+        <source>Can vary +/- %1 jus(s) per input.</source>
         <translation>உள்ளீடு ஒன்றுக்கு +/- %1 சாத்தோஷி (கள்) மாறுபடலாம்</translation>
     </message>
     <message>
@@ -2155,10 +2155,10 @@
     <message>
         <source>Specify a custom fee per kB (1,000 bytes) of the transaction's virtual size.
 
-Note:  Since the fee is calculated on a per-byte basis, a fee of "100 satoshis per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 satoshis.</source>
+Note:  Since the fee is calculated on a per-byte basis, a fee of "100 juss per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 juss.</source>
         <translation>பரிமாற்றத்தின் மெய்நிகர் அளவுக்கு kB (1,000 பைட்டுகளுக்கு) ஒரு தனிபயன் கட்டணத்தை குறிப்பிடவும்.
 
-குறிப்பு: கட்டணம் ஒவ்வொரு பைட் அடிப்படையில் கணக்கிடப்பட்டதால், 500 பைட்டுகள் (1 kB இன் பாதி) பரிவர்த்தனை அளவுக்கு "kB க்காக 100 satoshis" என்ற கட்டணம் இறுதியில் 50 சாத்தோஷிகளுக்கு கட்டணம் மட்டுமே கிடைக்கும்.</translation>
+குறிப்பு: கட்டணம் ஒவ்வொரு பைட் அடிப்படையில் கணக்கிடப்பட்டதால், 500 பைட்டுகள் (1 kB இன் பாதி) பரிவர்த்தனை அளவுக்கு "kB க்காக 100 juss" என்ற கட்டணம் இறுதியில் 50 சாத்தோஷிகளுக்கு கட்டணம் மட்டுமே கிடைக்கும்.</translation>
     </message>
     <message>
         <source>per kilobyte</source>

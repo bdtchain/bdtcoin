@@ -45,7 +45,7 @@ QString BdtcoinUnits::longName(int unit)
     case BDTC: return QString("BDTC");
     case mBDTC: return QString("mBDTC");
     case uBDTC: return QString::fromUtf8("µBDTC (bits)");
-    case SAT: return QString("Atomic (jus)");
+    case SAT: return QString("Jus (sat)");
     default: return QString("???");
     }
 }
@@ -55,7 +55,7 @@ QString BdtcoinUnits::shortName(int unit)
     switch(unit)
     {
     case uBDTC: return QString::fromUtf8("bits");
-    case SAT: return QString("jus");
+    case SAT: return QString("sat");
     default: return longName(unit);
     }
 }
@@ -67,7 +67,7 @@ QString BdtcoinUnits::description(int unit)
     case BDTC: return QString("Bdtcoins");
     case mBDTC: return QString("Milli-Bdtcoins (1 / 1" THIN_SP_UTF8 "000)");
     case uBDTC: return QString("Micro-Bdtcoins (bits) (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
-    case SAT: return QString("Atomic (jus) (1 / 100" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
+    case SAT: return QString("Jus (sat) (1 / 100" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
     default: return QString("???");
     }
 }

@@ -259,7 +259,7 @@
 #define PACKAGE_TARNAME "bdtcoin"
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL "https://bdtcoin.org/"
+#define PACKAGE_URL "https://bdtcoincore.org/"
 
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "0.21.1"

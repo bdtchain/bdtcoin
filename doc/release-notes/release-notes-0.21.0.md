@@ -3,7 +3,7 @@
 
 Bdtcoin Core version 0.21.0 is now available from:
 
-  <https://bdtcoin.org/bin/bdtcoin-core-0.21.0/>
+  <https://bdtcoincore.org/bin/bdtcoin-core-0.21.0/>
 
 This release includes new features, various bug fixes and performance
 improvements, as well as updated translations.
@@ -14,7 +14,7 @@ Please report bugs using the issue tracker at GitHub:
 
 To receive security and update notifications, please subscribe to:
 
-  <https://bdtcoin.org/en/list/announcements/join/>
+  <https://bdtcoincore.org/en/list/announcements/join/>
 
 How to Upgrade
 ==============
@@ -467,7 +467,7 @@ was already being broken by the move to descriptors.
   command line setting. The wallet will already fail to create transactions
   with fees higher than `-maxtxfee`. (#18467)
 
-- A new `fee_rate` parameter/option denominated in satoshis per vbyte (sat/vB)
+- A new `fee_rate` parameter/option denominated in juss per vbyte (sat/vB)
   is introduced to the `sendtoaddress`, `sendmany`, `fundrawtransaction` and
   `walletcreatefundedpsbt` RPCs as well as to the experimental new `send`
   RPC. The legacy `feeRate` option in `fundrawtransaction` and
@@ -1094,7 +1094,7 @@ Tests
 - #18629 scripts: Add pe .reloc section check to security-check.py (fanquake)
 - #18437 util: `Detect posix_fallocate()` instead of assuming (vasild)
 - #18413 script: Prevent ub when computing abs value for num opcode serialize (pierreN)
-- #18443 lockedpool: avoid sensitive data in core files (FreeBSD) (vasild)
+- #17993 lockedpool: avoid sensitive data in core files (FreeBSD) (vasild)
 - #18885 contrib: Move optimize-pngs.py script to the maintainer repo (MarcoFalke)
 - #18317 Serialization improvements step 6 (all except wallet/gui) (sipa)
 - #16127 More thread safety annotation coverage (ajtowns)

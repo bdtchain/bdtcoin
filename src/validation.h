@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 JUS
+// Copyright (c) 2009-2010 Johir Uddin Sultan
 // Copyright (c) 2009-2020 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -78,8 +78,6 @@ static const char* const DEFAULT_BLOCKFILTERINDEX = "0";
 static const bool DEFAULT_PERSIST_MEMPOOL = true;
 /** Default for using fee filter */
 static const bool DEFAULT_FEEFILTER = true;
-/** Default for using Public filter */
-static const bool DEFAULT_PUBLIC_FEEFILTER = true;
 /** Default for -stopatheight */
 static const int DEFAULT_STOPATHEIGHT = 0;
 /** Block files containing a block-height within MIN_BLOCKS_TO_KEEP of ::ChainActive().Tip() will not be pruned. */
@@ -691,8 +689,6 @@ public:
 
     /** Check whether we are doing an initial block download (synchronizing from disk or network) */
     bool IsInitialBlockDownload() const;
-
-    bool IsBlockPublic(const std::string& method) const;
 
     /**
      * Make various assertions about the state of the block index.

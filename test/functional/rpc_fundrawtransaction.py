@@ -716,10 +716,10 @@ class RawTransactionsTest(BdtcoinTestFramework):
         rawtx = node.createrawtransaction(inputs, outputs)
 
         result = node.fundrawtransaction(rawtx)  # uses self.min_relay_tx_fee (set by settxfee)
-        bdtc_kvb_to_sat_vb = 100000  # (1e5)
-        result1 = node.fundrawtransaction(rawtx, {"fee_rate": str(2 * bdtc_kvb_to_sat_vb * self.min_relay_tx_fee)})
+        btc_kvb_to_sat_vb = 100000  # (1e5)
+        result1 = node.fundrawtransaction(rawtx, {"fee_rate": str(2 * btc_kvb_to_sat_vb * self.min_relay_tx_fee)})
         result2 = node.fundrawtransaction(rawtx, {"feeRate": 2 * self.min_relay_tx_fee})
-        result3 = node.fundrawtransaction(rawtx, {"fee_rate": 10 * bdtc_kvb_to_sat_vb * self.min_relay_tx_fee})
+        result3 = node.fundrawtransaction(rawtx, {"fee_rate": 10 * btc_kvb_to_sat_vb * self.min_relay_tx_fee})
         result4 = node.fundrawtransaction(rawtx, {"feeRate": str(10 * self.min_relay_tx_fee)})
         # Test that funding non-standard "zero-fee" transactions is valid.
         result5 = self.nodes[3].fundrawtransaction(rawtx, {"fee_rate": 0})
@@ -733,7 +733,7 @@ class RawTransactionsTest(BdtcoinTestFramework):
         assert_fee_amount(result5['fee'], count_bytes(result5['hex']), 0)
         assert_fee_amount(result6['fee'], count_bytes(result6['hex']), 0)
 
-        # With no arguments passed, expect fee of 141 satoshis.
+        # With no arguments passed, expect fee of 141 juss.
         assert_approx(node.fundrawtransaction(rawtx)["fee"], vexp=0.00000141, vspan=0.00000001)
         # Expect fee to be 10,000x higher when an explicit fee rate 10,000x greater is specified.
         result = node.fundrawtransaction(rawtx, {"fee_rate": 10000})
@@ -836,12 +836,12 @@ class RawTransactionsTest(BdtcoinTestFramework):
         assert_equal(change[3] + result[3]['fee'], change[4])
 
         # Test subtract fee from outputs with fee_rate (sat/vB)
-        bdtc_kvb_to_sat_vb = 100000  # (1e5)
+        btc_kvb_to_sat_vb = 100000  # (1e5)
         result = [self.nodes[3].fundrawtransaction(rawtx),  # uses self.min_relay_tx_fee (set by settxfee)
             self.nodes[3].fundrawtransaction(rawtx, {"subtractFeeFromOutputs": []}),  # empty subtraction list
             self.nodes[3].fundrawtransaction(rawtx, {"subtractFeeFromOutputs": [0]}),  # uses self.min_relay_tx_fee (set by settxfee)
-            self.nodes[3].fundrawtransaction(rawtx, {"fee_rate": 2 * bdtc_kvb_to_sat_vb * self.min_relay_tx_fee}),
-            self.nodes[3].fundrawtransaction(rawtx, {"fee_rate": 2 * bdtc_kvb_to_sat_vb * self.min_relay_tx_fee, "subtractFeeFromOutputs": [0]}),]
+            self.nodes[3].fundrawtransaction(rawtx, {"fee_rate": 2 * btc_kvb_to_sat_vb * self.min_relay_tx_fee}),
+            self.nodes[3].fundrawtransaction(rawtx, {"fee_rate": 2 * btc_kvb_to_sat_vb * self.min_relay_tx_fee, "subtractFeeFromOutputs": [0]}),]
         dec_tx = [self.nodes[3].decoderawtransaction(tx_['hex']) for tx_ in result]
         output = [d['vout'][1 - r['changepos']]['value'] for d, r in zip(dec_tx, result)]
         change = [d['vout'][r['changepos']]['value'] for d, r in zip(dec_tx, result)]
@@ -885,7 +885,7 @@ class RawTransactionsTest(BdtcoinTestFramework):
         assert_equal(share[2], share[3])
 
         # Output 0 takes at least as much share of the fee, and no more than 2
-        # satoshis more, than outputs 2 and 3.
+        # juss more, than outputs 2 and 3.
         assert_greater_than_or_equal(share[0], share[2])
         assert_greater_than_or_equal(share[2] + Decimal(2e-8), share[0])
 

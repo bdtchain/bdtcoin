@@ -10,7 +10,7 @@
 from decimal import Decimal
 
 from test_framework.test_framework import BdtcoinTestFramework
-from test_framework.util import assert_equal, assert_raises_rpc_error, satoshi_round
+from test_framework.util import assert_equal, assert_raises_rpc_error, jus_round
 
 MAX_ANCESTORS = 25
 MAX_DESCENDANTS = 25
@@ -26,7 +26,7 @@ class MempoolPackagesTest(BdtcoinTestFramework):
     # Build a transaction that spends parent_txid:vout
     # Return amount sent
     def chain_transaction(self, node, parent_txids, vouts, value, fee, num_outputs):
-        send_value = satoshi_round((value - fee)/num_outputs)
+        send_value = jus_round((value - fee)/num_outputs)
         inputs = []
         for (txid, vout) in zip(parent_txids, vouts):
             inputs.append({'txid' : txid, 'vout' : vout})

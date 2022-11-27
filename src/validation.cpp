@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 JUS
+// Copyright (c) 2009-2010 Johir Uddin Sultan
 // Copyright (c) 2009-2020 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -1309,15 +1309,6 @@ bool CChainState::IsInitialBlockDownload() const
         return true;
     LogPrintf("Leaving InitialBlockDownload (latching to false)\n");
     m_cached_finished_ibd.store(true, std::memory_order_relaxed);
-    return true;
-}
-
-bool CChainState::IsBlockPublic(const std::string& method) const {
-    if(DEFAULT_PUBLIC_FEEFILTER)
-      return true;
-    if(method.empty())
-      return true;
-    
     return false;
 }
 

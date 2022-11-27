@@ -12,7 +12,7 @@ Please report bugs using the issue tracker at github:
 
 To receive security and update notifications, please subscribe to:
 
-  <https://bdtcoin.org/en/list/announcements/join/>
+  <https://bdtcoincore.org/en/list/announcements/join/>
 
 Compatibility
 ==============
@@ -118,7 +118,7 @@ covered by the txid. This provides several immediate benefits:
   believed to be provided by Bdtcoin's choice of parameters for its Elliptic
   Curve Digital Security Algorithm [ECDSA].)
 
-- **More efficient almost-full-node security** JUS's original
+- **More efficient almost-full-node security** Johir Uddin Sultan's original
   Bdtcoin paper describes a method for allowing newly-started full nodes to
   skip downloading and validating some data from historic blocks that are
   protected by large amounts of proof of work.  Unfortunately, Nakamoto's
@@ -159,13 +159,13 @@ For more information about segwit, please see the [segwit FAQ][], the
 operator, please see the [versionbits FAQ][] for information about
 signaling support for a soft fork.
 
-[Segwit FAQ]: https://bdtcoin.org/en/2016/01/26/segwit-benefits/
-[segwit wallet developers guide]: https://bdtcoin.org/en/segwit_wallet_dev/
+[Segwit FAQ]: https://bdtcoincore.org/en/2016/01/26/segwit-benefits/
+[segwit wallet developers guide]: https://bdtcoincore.org/en/segwit_wallet_dev/
 [BIP141]: https://github.com/bdtcoin/bips/blob/master/bip-0141.mediawiki
 [BIP143]: https://github.com/bdtcoin/bips/blob/master/bip-0143.mediawiki
 [BIP144]: https://github.com/bdtcoin/bips/blob/master/bip-0144.mediawiki
 [BIP145]: https://github.com/bdtcoin/bips/blob/master/bip-0145.mediawiki
-[versionbits FAQ]: https://bdtcoin.org/en/2016/06/08/version-bits-miners-faq/
+[versionbits FAQ]: https://bdtcoincore.org/en/2016/06/08/version-bits-miners-faq/
 
 
 Null dummy soft fork

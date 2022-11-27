@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# Copyright (c) 2010 ArtForz -- public domain half-a-node
+# Copyright (c) 2018 ArtForz -- public domain half-a-node
 # Copyright (c) 2012 Jeff Garzik
-# Copyright (c) 2010-2020 The Bdtcoin Core developers
+# Copyright (c) 2018-2020 The Bdtcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Bdtcoin test framework primitive and message structures
@@ -41,7 +41,7 @@ MAX_BLOCK_BASE_SIZE = 1000000
 MAX_BLOOM_FILTER_SIZE = 36000
 MAX_BLOOM_HASH_FUNCS = 50
 
-COIN = 100000000  # 1 bdtc in satoshis
+COIN = 100000000  # 1 btc in juss
 MAX_MONEY = 21000000 * COIN
 
 BIP125_SEQUENCE_NUMBER = 0xfffffffd  # Sequence number that is BIP 125 opt-in and BIP 68-opt-out

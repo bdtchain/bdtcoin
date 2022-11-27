@@ -33,7 +33,7 @@ def main():
         args.password = generate_password()
     elif args.password == '-':
         args.password = getpass()
-    
+
     # Create 16 byte hex salt
     salt = generate_salt(16)
     password_hmac = password_to_hmac(salt, args.password)

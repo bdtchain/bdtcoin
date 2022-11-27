@@ -1,1 +1,5 @@
-161.97.142.9:7393
+# List of fixed seed nodes for testnet
+
+# Onion nodes
+thfsmmn2jbdtcoin.onion
+

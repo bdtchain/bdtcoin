@@ -3,11 +3,11 @@
 ## Supported Versions
 
 See our website for versions of Bdtcoin Core that are currently supported with
-security updates: https://bdtcoin.org/en/lifecycle/#schedule
+security updates: https://bdtcoincore.org/en/lifecycle/#schedule
 
 ## Reporting a Vulnerability
 
-To report security issues send an email to security@bdtcoin.org (not for support).
+To report security issues send an email to security@bdtcoincore.org (not for support).
 
 The following keys may be used to communicate sensitive information to developers:
 

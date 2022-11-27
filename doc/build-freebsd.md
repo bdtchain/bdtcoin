@@ -13,7 +13,7 @@ You will need the following dependencies, which can be installed as root via pkg
 ```bash
 pkg install autoconf automake boost-libs git gmake libevent libtool pkgconf
 
-git clone https://github.com/bdtchain/bdtcoin.git
+git clone https://github.com/bdtcoin/bdtcoin.git
 ```
 
 In order to run the test suite (recommended), you will need to have Python 3 installed:

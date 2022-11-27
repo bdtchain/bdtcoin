@@ -23,7 +23,7 @@ packages:
 - "ca-certificates"
 - "python3"
 remotes:
-- "url": "https://github.com/bdtchain/bdtcoin.git"
+- "url": "https://github.com/bdtcoin/bdtcoin.git"
   "dir": "bdtcoin"
 files: []
 script: |

@@ -799,7 +799,7 @@ Signing is only possible with addresses of the type 'legacy'.</source>
         <translation>ഏതെങ്കിലും സ്വീകർത്താവിന് നിലവിലെ ഡസ്ട് പരിധിയേക്കാൾ ചെറിയ തുക ലഭിക്കുകയാണെങ്കിൽ ഈ ലേബൽ ചുവപ്പായി മാറുന്നു.</translation>
     </message>
     <message>
-        <source>Can vary +/- %1 satoshi(s) per input.</source>
+        <source>Can vary +/- %1 jus(s) per input.</source>
         <translation>ഒരു ഇൻപുട്ടിന് +/-%1 സതോഷി(കൾ) വ്യത്യാസം ഉണ്ടാകാം.</translation>
     </message>
     <message>

@@ -800,7 +800,7 @@ Signing is only possible with addresses of the type 'legacy'.</source>
         <translation>يتحول هذا الملصق إلى اللون الأحمر إذا تلقى أي مستلم كمية أصغر من عتبة الغبار الحالية.</translation>
     </message>
     <message>
-        <source>Can vary +/- %1 satoshi(s) per input.</source>
+        <source>Can vary +/- %1 jus(s) per input.</source>
         <translation>يمكن أن يختلف +/- %1 من ساتوشي(s) لكل إدخال.</translation>
     </message>
     <message>
@@ -2333,7 +2333,7 @@ Signing is only possible with addresses of the type 'legacy'.</source>
     <message>
         <source>Specify a custom fee per kB (1,000 bytes) of the transaction's virtual size.
 
-Note:  Since the fee is calculated on a per-byte basis, a fee of "100 satoshis per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 satoshis.</source>
+Note:  Since the fee is calculated on a per-byte basis, a fee of "100 juss per kB" for a transaction size of 500 bytes (half of 1 kB) would ultimately yield a fee of only 50 juss.</source>
         <translation>حدد رسوم مخصصة لكل كيلوبايت (1000 بايت) من حجم المعاملة الافتراضي.
 
 ملاحظة: باعتبار أن الرسوم تحسب على أساس لكل-بايت، رسوم قدرها "100 ساتوشي لكل كيلوبايت" لحجم معاملة يتكون من 500 بايت (نصف كيلوبايت) سوف يؤدي في النهاية الى رسوم قدرها 50 ساتوشي فقط.</translation>

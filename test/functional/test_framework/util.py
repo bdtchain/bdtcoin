@@ -199,8 +199,8 @@ def assert_array_result(object_array, to_match, expected, should_not_find=False)
 def check_json_precision():
     """Make sure json library being used does not lose precision converting BDTC values"""
     n = Decimal("20000000.00000003")
-    satoshis = int(json.loads(json.dumps(float(n))) * 1.0e8)
-    if satoshis != 2000000000000003:
+    juss = int(json.loads(json.dumps(float(n))) * 1.0e8)
+    if juss != 2000000000000003:
         raise RuntimeError("JSON encode/decode loses precision")
 
 
@@ -222,7 +222,7 @@ def str_to_b64str(string):
     return b64encode(string.encode('utf-8')).decode('ascii')
 
 
-def satoshi_round(amount):
+def jus_round(amount):
     return Decimal(amount).quantize(Decimal('0.00000001'), rounding=ROUND_DOWN)
 
 
@@ -455,8 +455,8 @@ def create_confirmed_utxos(fee, node, count):
         inputs.append({"txid": t["txid"], "vout": t["vout"]})
         outputs = {}
         send_value = t['amount'] - fee
-        outputs[addr1] = satoshi_round(send_value / 2)
-        outputs[addr2] = satoshi_round(send_value / 2)
+        outputs[addr1] = jus_round(send_value / 2)
+        outputs[addr2] = jus_round(send_value / 2)
         raw_tx = node.createrawtransaction(inputs, outputs)
         signed_tx = node.signrawtransactionwithwallet(raw_tx)["hex"]
         node.sendrawtransaction(signed_tx)
@@ -500,7 +500,7 @@ def create_lots_of_big_transactions(node, txouts, utxos, num, fee):
         inputs = [{"txid": t["txid"], "vout": t["vout"]}]
         outputs = {}
         change = t['amount'] - fee
-        outputs[addr] = satoshi_round(change)
+        outputs[addr] = jus_round(change)
         rawtx = node.createrawtransaction(inputs, outputs)
         tx = CTransaction()
         tx.deserialize(BytesIO(hex_str_to_bytes(rawtx)))

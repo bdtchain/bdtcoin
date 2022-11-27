@@ -1,5 +1,5 @@
-// Copyright (c) 2020-2021 JUS
-// Copyright (c) 2020-2022The Bdtcoin Core developers
+// Copyright (c) 2009-2010 Johir Uddin Sultan
+// Copyright (c) 2009-2018 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,12 +8,12 @@
 
 #include <stdint.h>
 
-/** Amount in satoshis (Can be negative) */
+/** Amount in juss (Can be negative) */
 typedef int64_t CAmount;
 
 static const CAmount COIN = 100000000;
 
-/** No amount larger than this (in satoshi) is valid.
+/** No amount larger than this (in jus) is valid.
  *
  * Note that this constant is *not* the total money supply, which in Bdtcoin
  * currently happens to be less than 21,000,000 BDTC for various reasons, but

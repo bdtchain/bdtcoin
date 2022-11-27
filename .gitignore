@@ -13,7 +13,8 @@ src/test/fuzz/*
 !src/test/fuzz/*.*
 src/test/test_bdtcoin
 src/qt/test/test_bdtcoin-qt
-
+.vscode*
+.vscode
 # autoreconf
 Makefile.in
 aclocal.m4
