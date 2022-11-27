@@ -1,20 +1,18 @@
 Bdtcoin Core integration/staging tree
 =====================================
 
-https://bdtcoincore.org
+https://bdtcoin.org
 
 What is Bdtcoin?
 ----------------
 
-Bdtcoin is an experimental digital currency that enables instant payments to
-anyone, anywhere in the world. Bdtcoin uses peer-to-peer technology to operate
-with no central authority: managing transactions and issuing money are carried
-out collectively by the network. Bdtcoin Core is the name of open source
-software which enables the use of this currency.
+BDTCOIN is a brand-new decentralized digital gold standard currency that allows users to directly exchange value with one another via a peer-to-peer network.
+ This is a network in which all users have equal power and are connected directly to one another without the use of a central server. 
+ This enables data to be shared and stored, as well as bdtcoin payments to be sent and received between parties in a seamless manner.
 
 For more information, as well as an immediately usable, binary version of
-the Bdtcoin Core software, see https://bdtcoincore.org/en/download/, or read the
-[original whitepaper](https://bdtcoincore.org/bdtcoin.pdf).
+the Bdtcoin Core software, see https://bdtcoin.org/en/download/, or read the
+[original whitepaper](https://bdtcoin.co/bdtcoin.pdf).
 
 License
 -------
@@ -25,14 +23,14 @@ information or see https://opensource.org/licenses/MIT.
 Development Process
 -------------------
 
-The `master` branch is regularly built (see `doc/build-*.md` for instructions) and tested, but it is not guaranteed to be
+The `main` branch is regularly built (see `doc/build-*.md` for instructions) and tested, but it is not guaranteed to be
 completely stable. [Tags](https://github.com/bdtcoin/bdtcoin/tags) are created
 regularly from release branches to indicate new official, stable release versions of Bdtcoin Core.
 
-The https://github.com/bdtcoin-core/gui repository is used exclusively for the
-development of the GUI. Its master branch is identical in all monotree
+<!-- The https://github.com/bdtcoin-core/gui repository is used exclusively for the
+development of the GUI. Its main branch is identical in all monotree
 repositories. Release branches and tags do not exist, so please do not fork
-that repository unless it is for development reasons.
+that repository unless it is for development reasons. -->
 
 The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md)
 and useful hints for developers can be found in [doc/developer-notes.md](doc/developer-notes.md).
