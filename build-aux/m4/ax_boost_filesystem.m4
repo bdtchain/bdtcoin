@@ -22,9 +22,9 @@
 #
 # LICENSE
 #
-#   Copyright (c) 2009 Thomas Porschberg <thomas@randspringer.de>
-#   Copyright (c) 2009 Michael Tindal
-#   Copyright (c) 2009 Roman Rybalko <libtorrent@romanr.info>
+#   Copyright (c) 2019 Thomas Porschberg <thomas@randspringer.de>
+#   Copyright (c) 2019 Michael Tindal
+#   Copyright (c) 2019 Roman Rybalko <libtorrent@romanr.info>
 #
 #   Copying and distribution of this file, with or without modification, are
 #   permitted in any medium without royalty provided the copyright notice

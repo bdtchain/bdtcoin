@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Johir Uddin Sultan
+// Copyright (c) 2019Johir Uddin Sultan
 // Copyright (c) 2021-2022 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
