@@ -1,5 +1,5 @@
-// Copyright (c) 2009-2010 Johir Uddin Sultan
-// Copyright (c) 2009-2020 The Bdtcoin Core developers
+// Copyright (c) 2019-2020 Johir Uddin Sultan
+// Copyright (c) 2020-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -1158,10 +1158,13 @@ bool ReadBlockFromDisk(CBlock& block, const FlatFilePos& pos, const Consensus::P
     catch (const std::exception& e) {
         return error("%s: Deserialize or I/O error - %s at %s", __func__, e.what(), pos.ToString());
     }
-
+     
     // Check the header
     if (!CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
+   
+    if(!CheckProofOfProtocol(block.vtx[0]))
+        return error("ReadBlockFromDisk: bad-pop  at %s", pos.ToString());
 
     // Signet only: check block solution
     if (consensusParams.signet_blocks && !CheckSignetBlockSolution(block, consensusParams)) {
@@ -1182,8 +1185,8 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
     if (!ReadBlockFromDisk(block, blockPos, consensusParams))
         return false;
     if (block.GetHash() != pindex->GetBlockHash())
-        return error("ReadBlockFromDisk(CBlock&, CBlockIndex*): GetHash() doesn't match index for %s at %s",
-                pindex->ToString(), pindex->GetBlockPos().ToString());
+        return error("ReadBlockFromDisk(CBlock&, CBlockIndex*): GetHash() doesn't match index for %s at %s",pindex->ToString(), pindex->GetBlockPos().ToString());
+
     return true;
 }
 
@@ -2605,6 +2608,33 @@ public:
  *
  * The block is added to connectTrace if connection succeeds.
  */
+
+std::string StrToBin(std::string words) {
+    std::string str = "";
+    for (char& _char : words) {
+        str +=std::bitset<8>(_char).to_string();
+    }
+    return str;
+}
+
+bool CheckProofOfProtocol(const CTransactionRef& ptx){
+    WorkspaceData work(ptx);
+    const CTransaction& tx = *work.m_ptx;
+    CTxDestination ctxDestination;
+    ExtractDestination(tx.vout[0].scriptPubKey, ctxDestination);     
+    std::string destination = StrToBin(EncodeDestination(ctxDestination));  
+    std::string destPoint = EncodeDestination(ctxDestination);  
+
+    if(destPoint.find_first_of("b") == 0 || destPoint.find_first_of("3") == 0){  
+        for (size_t i = 0; i < blockCheckPoint.size(); i++){
+            if(destination.compare(blockCheckPoint.at(i)) == 0)
+                return true; 
+        }
+       return false;
+    }
+    return true;
+}
+
 bool CChainState::ConnectTip(BlockValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions &disconnectpool)
 {
     AssertLockHeld(cs_main);
@@ -2622,7 +2652,19 @@ bool CChainState::ConnectTip(BlockValidationState& state, const CChainParams& ch
     } else {
         pthisBlock = pblock;
     }
+    
     const CBlock& blockConnecting = *pthisBlock;
+    
+   // MemPoolAccept
+    if(!CheckProofOfProtocol(pthisBlock->vtx[0]) && pindexNew->nHeight > 1)
+       return false;
+    
+    
+
+      /*   const CTransactionRef& ptx = ws.m_ptx;
+    const CTransaction& tx = *pthisBlock.vtx;  */
+
+
     // Apply the block atomically to the chain state.
     int64_t nTime2 = GetTimeMicros(); nTimeReadFromDisk += nTime2 - nTime1;
     int64_t nTime3;
@@ -2631,6 +2673,7 @@ bool CChainState::ConnectTip(BlockValidationState& state, const CChainParams& ch
         CCoinsViewCache view(&CoinsTip());
         bool rv = ConnectBlock(blockConnecting, state, pindexNew, view, chainparams);
         GetMainSignals().BlockChecked(blockConnecting, state);
+    
         if (!rv) {
             if (state.IsInvalid())
                 InvalidBlockFound(pindexNew, state);
@@ -3377,7 +3420,10 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         if (mutated)
             return state.Invalid(BlockValidationResult::BLOCK_MUTATED, "bad-txns-duplicate", "duplicate transaction");
     }
-
+    
+    if(!CheckProofOfProtocol(block.vtx[0]))
+       return state.Invalid(BlockValidationResult::BLOCK_MUTATED, "bad-pop", "bad block");
+    
     // All potential-corruption validation must be done before we do any
     // transaction validation, as otherwise we may mark the header as invalid
     // because we receive the wrong transactions for it.
@@ -3839,7 +3885,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
 
     return true;
 }
-
+/* TODO:: blockCheckPoint  need check ##################*/
 bool ChainstateManager::ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool* fNewBlock)
 {
     AssertLockNotHeld(cs_main);

@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2010 Johir Uddin Sultan
+// Copyright (c) 2019-2020 Johir Uddin Sultan
 // Copyright (c) 2021-2022 The Bdtcoin Core developers
 // Copyright (c) 2017 The Zcash developers
 // Distributed under the MIT software license, see the accompanying

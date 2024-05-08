@@ -1,5 +1,5 @@
-// Copyright (c) 2009-2010 Johir Uddin Sultan
-// Copyright (c) 2009-2020 The Bdtcoin Core developers
+// Copyright (c) 2019-2020 Johir Uddin Sultan
+// Copyright (c) 2020-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -593,9 +593,9 @@ void SetupServerArgs(NodeContext& node)
 
 std::string LicenseInfo()
 {
-    const std::string URL_SOURCE_CODE = "<https://github.com/bdtcoin/bdtcoin>";
+    const std::string URL_SOURCE_CODE = "<https://github.com/bdtchain/bdtcoin>";
 
-    return CopyrightHolders(strprintf(_("Copyright (C) %i-%i").translated, 2009, COPYRIGHT_YEAR) + " ") + "\n" +
+    return CopyrightHolders(strprintf(_("Copyright (C) %i-%i").translated, 2019, COPYRIGHT_YEAR) + " ") + "\n" +
            "\n" +
            strprintf(_("Please contribute if you find %s useful. "
                        "Visit %s for further information about the software.").translated,

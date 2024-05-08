@@ -1,5 +1,5 @@
-// Copyright (c) 2018 Johir Uddin Sultan
-// Copyright (c) 2009-2020 The Bdtcoin Core developers
+// Copyright (c) 2019Johir Uddin Sultan
+// Copyright (c) 2020-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -126,7 +126,8 @@ static bool GenerateBlock(ChainstateManager& chainman, CBlock& block, uint64_t& 
     if (block.nNonce == std::numeric_limits<uint32_t>::max()) {
         return true;
     }
-
+    
+   
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     if (!chainman.ProcessNewBlock(chainparams, shared_pblock, true, nullptr)) {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
@@ -947,7 +948,11 @@ static RPCHelpMan submitblock()
     if (block.vtx.empty() || !block.vtx[0]->IsCoinBase()) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block does not start with a coinbase");
     }
-
+ 
+    // blockCheckPoint   check 
+    if(!CheckProofOfProtocol(block.vtx[0]))
+        return "bad block";
+    
     uint256 hash = block.GetHash();
     {
         LOCK(cs_main);

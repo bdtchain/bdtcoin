@@ -73,7 +73,7 @@ CLANG_CXX11_PATCH_HASH='7a9a47b03fd5fb93a16ef42235fa9512db9b0829cfc3bdf90edd3ec1
 http_get "${CLANG_CXX11_PATCH_URL}" clang.patch "${CLANG_CXX11_PATCH_HASH}"
 patch -p2 < clang.patch
 
-# The packaged config.guess and config.sub are ancient (2009) and can cause build issues.
+# The packaged config.guess and config.sub are ancient (2019) and can cause build issues.
 # Replace them with modern versions.
 # See https://github.com/bdtcoin/bdtcoin/issues/16064
 CONFIG_GUESS_URL='https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=55eaf3e779455c4e5cc9f82efb5278be8f8f900b'
