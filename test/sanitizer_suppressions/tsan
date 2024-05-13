@@ -47,4 +47,4 @@ deadlock:src/qt/test/*
 # External libraries
 deadlock:libdb
 race:libzmq
-race:epoll_ctl  # https://github.com/bdtcoin/bdtcoin/pull/20218
+race:epoll_ctl  # https://github.com/bdtchain/bdtcoin/pull/20218

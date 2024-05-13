@@ -2413,7 +2413,7 @@ static RPCHelpMan dumptxoutset()
         // use below this block.
         //
         // See discussion here:
-        //   https://github.com/bdtcoin/bdtcoin/pull/15606#discussion_r274479369
+        //   https://github.com/bdtchain/bdtcoin/pull/15606#discussion_r274479369
         //
         LOCK(::cs_main);
 

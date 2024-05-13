@@ -22,7 +22,7 @@ libtool
 pkg-config
 python37
 
-git clone https://github.com/bdtcoin/bdtcoin.git
+git clone https://github.com/bdtchain/bdtcoin.git
 ```
 
 See [dependencies.md](dependencies.md) for a complete overview.

@@ -15,7 +15,6 @@ src/test/test_bdtcoin
 src/qt/test/test_bdtcoin-qt
 .vscode*
 .vscode
-db-4.8.30.NC.tar.gz
 # autoreconf
 Makefile.in
 aclocal.m4

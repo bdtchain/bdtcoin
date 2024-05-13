@@ -7,7 +7,7 @@ translations. Upgrading to this release is recommended.
 
 Please report bugs using the issue tracker at github:
 
-  https://github.com/bdtcoin/bdtcoin/issues
+  https://github.com/bdtchain/bdtcoin/issues
 
 How to Upgrade
 ===============

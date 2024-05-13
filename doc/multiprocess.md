@@ -2,11 +2,11 @@
 
 On unix systems, the `--enable-multiprocess` build option can be passed to `./configure` to build new `bdtcoin-node`, `bdtcoin-wallet`, and `bdtcoin-gui` executables alongside existing `bdtcoind` and `bdtcoin-qt` executables.
 
-`bdtcoin-node` is a drop-in replacement for `bdtcoind`, and `bdtcoin-gui` is a drop-in replacement for `bdtcoin-qt`, and there are no differences in use or external behavior between the new and old executables. But internally (after [#10102](https://github.com/bdtcoin/bdtcoin/pull/10102)), `bdtcoin-gui` will spawn a `bdtcoin-node` process to run P2P and RPC code, communicating with it across a socket pair, and `bdtcoin-node` will spawn `bdtcoin-wallet` to run wallet code, also communicating over a socket pair. This will let node, wallet, and GUI code run in separate address spaces for better isolation, and allow future improvements like being able to start and stop components independently on different machines and environments.
+`bdtcoin-node` is a drop-in replacement for `bdtcoind`, and `bdtcoin-gui` is a drop-in replacement for `bdtcoin-qt`, and there are no differences in use or external behavior between the new and old executables. But internally (after [#10102](https://github.com/bdtchain/bdtcoin/pull/10102)), `bdtcoin-gui` will spawn a `bdtcoin-node` process to run P2P and RPC code, communicating with it across a socket pair, and `bdtcoin-node` will spawn `bdtcoin-wallet` to run wallet code, also communicating over a socket pair. This will let node, wallet, and GUI code run in separate address spaces for better isolation, and allow future improvements like being able to start and stop components independently on different machines and environments.
 
 ## Next steps
 
-Specific next steps after [#10102](https://github.com/bdtcoin/bdtcoin/pull/10102) will be:
+Specific next steps after [#10102](https://github.com/bdtchain/bdtcoin/pull/10102) will be:
 
 - [ ] Adding `-ipcbind` and `-ipcconnect` options to `bdtcoin-node`, `bdtcoin-wallet`, and `bdtcoin-gui` executables so they can listen and connect to TCP ports and unix socket paths. This will allow separate processes to be started and stopped any time and connect to each other.
 - [ ] Adding `-server` and `-rpcbind` options to the `bdtcoin-wallet` executable so wallet processes can handle RPC requests directly without going through the node.
@@ -15,7 +15,7 @@ Specific next steps after [#10102](https://github.com/bdtcoin/bdtcoin/pull/10102
 
 ## Debugging
 
-After [#10102](https://github.com/bdtcoin/bdtcoin/pull/10102), the `-debug=ipc` command line option can be used to see requests and responses between processes.
+After [#10102](https://github.com/bdtchain/bdtcoin/pull/10102), the `-debug=ipc` command line option can be used to see requests and responses between processes.
 
 ## Installation
 

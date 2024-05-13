@@ -10,7 +10,7 @@ improvements, as well as updated translations.
 
 Please report bugs using the issue tracker at GitHub:
 
-  <https://github.com/bdtcoin/bdtcoin/issues>
+  <https://github.com/bdtchain/bdtcoin/issues>
 
 To receive security and update notifications, please subscribe to:
 
@@ -163,8 +163,8 @@ New settings
 - A new `-asmap` configuration option has been added to diversify the
   node's network connections by mapping IP addresses Autonomous System
   Numbers (ASNs) and then limiting the number of connections made to any
-  single ASN.  See [issue #16599](https://github.com/bdtcoin/bdtcoin/issues/16599),
-  [PR #16702](https://github.com/bdtcoin/bdtcoin/pull/16702), and the
+  single ASN.  See [issue #16599](https://github.com/bdtchain/bdtcoin/issues/16599),
+  [PR #16702](https://github.com/bdtchain/bdtcoin/pull/16702), and the
   `bdtcoind help` for more information.  This option is experimental and
   subject to removal or breaking changes in future releases, so the
   legacy /16 prefix mapping of IP addresses remains the default.  (#16702)

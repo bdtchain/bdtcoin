@@ -7,7 +7,7 @@ performance improvements.
 
 Please report bugs using the issue tracker at github:
 
-  <https://github.com/bdtcoin/bdtcoin/issues>
+  <https://github.com/bdtchain/bdtcoin/issues>
 
 To receive security and update notifications, please subscribe to:
 
