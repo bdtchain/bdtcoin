@@ -123,9 +123,14 @@ public:
         // This is fine at runtime as we'll fall back to using them as an addrfetch if they don't support the
         // service bits we want, but we should get them updated to support all service bits wanted by any
         // release ASAP to avoid it where possible.
-        vSeeds.emplace_back("seeder.quantumchain.cyou"); 
-
-
+       
+        vSeeds.emplace_back("seeder.quantumchain.cyou."); 
+        vSeeds.emplace_back("dns.quantumchain.cyou."); 
+        vSeeds.emplace_back("quantum1.quantumchain.cyou."); 
+        vSeeds.emplace_back("quantum2.quantumchain.cyou."); 
+        vSeeds.emplace_back("quantum3.quantumchain.cyou."); 
+        vSeeds.emplace_back("quantum4.quantumchain.cyou."); 
+        
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,85);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,5);
         base58Prefixes[SECRET_KEY]     = std::vector<unsigned char>(1,128);
@@ -221,7 +226,7 @@ public:
         vFixedSeeds.clear();
         vSeeds.clear();
         // nodes with support for servicebits filtering should be at the top
-        vSeeds.emplace_back("tseeder.quantumchain.cyou");
+        vSeeds.emplace_back("tseeder.quantumchain.cyou.");
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);

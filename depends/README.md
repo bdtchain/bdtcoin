@@ -8,9 +8,13 @@ To build for another arch/OS:
 
     make HOST=host-platform-triplet
 
+    make HOST=x86_64-pc-linux-gnu
+
 For example:
 
     make HOST=x86_64-w64-mingw32 -j4
+
+    make HOST=x86_64-pc-linux-gnu
 
 **Bdtcoin Core's configure script by default will ignore the depends output.** In
 order for it to pick up libraries, tools, and settings from the depends build,
@@ -19,6 +23,7 @@ build. In the above example, a prefix dir named x86_64-w64-mingw32 will be
 created. To use it for Bdtcoin:
 
     ./configure --prefix=$PWD/depends/x86_64-w64-mingw32
+    ./configure --prefix=$PWD/depends/x86_64-pc-linux-gnu
 
 Common `host-platform-triplets` for cross compilation are:
 
@@ -72,7 +77,7 @@ For linux RISC-V 64-bit cross compilation (there are no packages for 32-bit):
 
     sudo apt-get install g++-riscv64-linux-gnu binutils-riscv64-linux-gnu
 
-RISC-V known issue: gcc-7.3.0 and gcc-7.3.1 result in a broken `test_bdtcoin` executable (see https://github.com/bdtcoin/bdtcoin/pull/13543),
+RISC-V known issue: gcc-7.3.0 and gcc-7.3.1 result in a broken `test_bdtcoin` executable (see https://github.com/bdtchain/bdtcoin/pull/13543),
 this is apparently fixed in gcc-8.1.0.
 
 For linux S390X cross compilation:
@@ -142,10 +147,9 @@ In order to build `ANDROID_API_LEVEL` (API level corresponding to the Android ve
 API levels from 24 to 29 have been tested to work.
 
 If the build includes Qt, environment variables `ANDROID_SDK` and `ANDROID_NDK` need to be set as well but can otherwise be omitted.
-This is an example command for a default build with no disabled dependencies:
+This is an example command for a default build with no disabled dependencies: aarch64-linux-android21-clang++ 
 
-    ANDROID_SDK=/home/user/Android/Sdk ANDROID_NDK=/home/user/Android/Sdk/ndk-bundle make HOST=aarch64-linux-android ANDROID_API_LEVEL=28 ANDROID_TOOLCHAIN_BIN=/home/user/Android/Sdk/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin
-
+ANDROID_SDK=/home/user/Android/Sdk ANDROID_NDK=/home/user/Android/Sdk/ndk-bundle make HOST=aarch64-linux-android ANDROID_API_LEVEL=28 ANDROID_TOOLCHAIN_BIN=/home/user/Android/Sdk/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/
 ### Other documentation
 
 - [description.md](description.md): General description of the depends system

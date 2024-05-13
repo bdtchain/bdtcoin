@@ -66,7 +66,7 @@ brew install berkeley-db4
 
 1. Clone the Bdtcoin Core source code:
     ```shell
-    git clone https://github.com/bdtcoin/bdtcoin
+    git clone https://github.com/bdtchain/bdtcoin
     cd bdtcoin
     ```
 
@@ -132,4 +132,4 @@ tail -f $HOME/Library/Application\ Support/Bdtcoin/debug.log
 ## Notes
 * Tested on OS X 10.12 Sierra through macOS 10.15 Catalina on 64-bit Intel
 processors only.
-* Building with downloaded Qt binaries is not officially supported. See the notes in [#7714](https://github.com/bdtcoin/bdtcoin/issues/7714).
+* Building with downloaded Qt binaries is not officially supported. See the notes in [#7714](https://github.com/bdtchain/bdtcoin/issues/7714).

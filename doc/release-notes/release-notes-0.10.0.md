@@ -7,7 +7,7 @@ bug fixes.
 
 Please report bugs using the issue tracker at github:
 
-  https://github.com/bdtcoin/bdtcoin/issues
+  https://github.com/bdtchain/bdtcoin/issues
 
 Upgrading and downgrading
 =========================
@@ -230,7 +230,7 @@ bindings such as [python-bdtcoinlib](https://pypi.python.org/pypi/python-bdtcoin
 alternative node implementations.
 
 This library is called `libbdtcoinconsensus.so` (or, `.dll` for Windows).
-Its interface is defined in the C header [bdtcoinconsensus.h](https://github.com/bdtcoin/bdtcoin/blob/0.10/src/script/bdtcoinconsensus.h).
+Its interface is defined in the C header [bdtcoinconsensus.h](https://github.com/bdtchain/bdtcoin/blob/0.10/src/script/bdtcoinconsensus.h).
 
 In its initial version the API includes two functions:
 

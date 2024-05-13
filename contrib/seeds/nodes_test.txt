@@ -1,5 +1,13 @@
 # List of fixed seed nodes for testnet
+161.97.137.75:7393
+161.97.142.9:7393
+45.151.123.96:7393
+173.249.50.96:7393
+128.199.162.215:7393
+94.233.90.30:7393
 
-# Onion nodes
-thfsmmn2jbdtcoin.onion
+# ipv6 List of fixed seed nodes for testnet
+[2001:19f0:6001:306f:ec4:7aff:fe8f:66ec]:7393
 
+# onion List of fixed seed nodes for testnet
+#xgjdua2ozp7mjw2w47eylrnfqdn6xtevujbqrqdnmomgvex5omyhdaqd.onion:7393

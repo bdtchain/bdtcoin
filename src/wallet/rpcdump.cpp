@@ -754,7 +754,7 @@ RPCHelpMan dumpwallet()
 
     /* Prevent arbitrary files from being overwritten. There have been reports
      * that users have overwritten wallet files this way:
-     * https://github.com/bdtcoin/bdtcoin/issues/9934
+     * https://github.com/bdtchain/bdtcoin/issues/9934
      * It may also avoid other security issues.
      */
     if (fs::exists(filepath)) {

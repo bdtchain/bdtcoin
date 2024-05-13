@@ -2,7 +2,7 @@ Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: Bdtcoin
 Upstream-Contact: Johir Uddin Sultan <jusn@gmx.com>
  irc://#bdtcoin@freenode.net
-Source: https://github.com/bdtcoin/bdtcoin
+Source: https://github.com/bdtchain/bdtcoin
 
 Files: *
 Copyright: 2009-2020, Bdtcoin Core Developers

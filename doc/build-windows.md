@@ -72,7 +72,7 @@ If you want to build the windows installer with `make deploy` you need [NSIS](ht
 
 Acquire the source in the usual way:
 
-    git clone https://github.com/bdtcoin/bdtcoin.git
+    git clone https://github.com/bdtchain/bdtcoin.git
     cd bdtcoin
 
 ## Building for 64-bit Windows
@@ -104,6 +104,8 @@ Build using:
     make HOST=x86_64-w64-mingw32
     cd ..
     ./autogen.sh
+    ./configure --prefix=$PWD/depends/x86_64-w64-mingw32
+    CONFIG_SITE=$PWD/depends/x86_64-w64-mingw32/share/config.site ./configure --prefix==$PWD/depends/x86_64-w64-mingw32
     CONFIG_SITE=$PWD/depends/x86_64-w64-mingw32/share/config.site ./configure --prefix=/
     make
     sudo bash -c "echo 1 > /proc/sys/fs/binfmt_misc/status" # Enable WSL support for Win32 applications.

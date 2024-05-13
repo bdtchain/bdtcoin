@@ -5,7 +5,7 @@ NOTE: 0.5.4rc3 is being renamed to 0.5.4 final with no changes.
 This is a bugfix-only release in the 0.5.x series, plus a few protocol updates.
 
 Please report bugs using the issue tracker at github:
-https://github.com/bdtcoin/bdtcoin/issues
+https://github.com/bdtchain/bdtcoin/issues
 
 Stable source code is hosted at Gitorious:
 http://gitorious.org/bdtcoin/bdtcoind-stable/archive-tarball/v0.5.4#.tar.gz
