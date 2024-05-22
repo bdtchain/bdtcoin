@@ -1,0 +1,14 @@
+prefix=/home/quantum/Documents/coin/bdtcoin-0.21.1/depends/x86_64-pc-linux-gnu
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 FontDatabaseSupport
+Description: Qt FontDatabaseSupport module
+Version: 5.9.8
+Libs: -L${libdir} -lQt5FontDatabaseSupport 
+Libs.private: -L/home/quantum/Documents/coin/bdtcoin-0.21.1/depends/x86_64-pc-linux-gnu/lib -lQt5Gui -lqtlibpng -lqtharfbuzz -lQt5Core -lm -lz -ldl -lpthread -L//home/quantum/Documents/coin/bdtcoin-0.21.1/depends/x86_64-pc-linux-gnu/lib -lfontconfig -lfreetype 
+Cflags: -I${includedir}/QtFontDatabaseSupport 
+Requires: Qt5Core Qt5Gui
+

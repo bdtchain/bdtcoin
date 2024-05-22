@@ -1,0 +1,14 @@
+prefix=/home/quantum/Documents/coin/bdtcoin-0.21.1/depends/x86_64-pc-linux-gnu
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 XcbQpa
+Description: Qt XcbQpa module
+Version: 5.9.8
+Libs: -L${libdir} -lQt5XcbQpa 
+Libs.private: -L/home/quantum/Documents/coin/bdtcoin-0.21.1/depends/x86_64-pc-linux-gnu/lib -lQt5ServiceSupport -lQt5ThemeSupport -lQt5DBus -lQt5EventDispatcherSupport -lQt5FontDatabaseSupport -L//home/quantum/Documents/coin/bdtcoin-0.21.1/depends/x86_64-pc-linux-gnu/lib -lfontconfig -lfreetype -lQt5Gui -lqtlibpng -lqtharfbuzz -lQt5Core -lm -lz -lpthread -lxcb-static -lxcb -ldl  
+Cflags: -I${includedir}/QtXcbQpa 
+Requires: Qt5Core Qt5Gui Qt5Core Qt5Gui Qt5ServiceSupport Qt5ThemeSupport Qt5EventDispatcherSupport Qt5FontDatabaseSupport
+
