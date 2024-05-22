@@ -118,7 +118,7 @@ build script logic) are searched for among the host system packages using
 <dd>build libmultiprocess (experimental, requires cmake)</dd>
 <dt>DEBUG</dt>
 <dd>disable some optimizations and enable more runtime checking</dd>
-<dt>HOST_ID_SALT</dt>
+<dt> HOST_ID_SALT </dt>
 <dd>Optional salt to use when generating host package ids</dd>
 <dt>BUILD_ID_SALT</dt>
 <dd>Optional salt to use when generating build package ids</dd>

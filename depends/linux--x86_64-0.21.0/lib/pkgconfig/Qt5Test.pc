@@ -1,0 +1,14 @@
+prefix=/home/quantum/Documents/coin/bdtcoin-0.21.1/depends/x86_64-pc-linux-gnu
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 Test
+Description: Qt Unit Testing Library
+Version: 5.9.8
+Libs: -L${libdir} -lQt5Test 
+Libs.private: -L/home/quantum/Documents/coin/bdtcoin-0.21.1/depends/x86_64-pc-linux-gnu/lib -lQt5Core -lm -lz -ldl -lpthread  
+Cflags: -I${includedir}/QtTest 
+Requires: Qt5Core
+

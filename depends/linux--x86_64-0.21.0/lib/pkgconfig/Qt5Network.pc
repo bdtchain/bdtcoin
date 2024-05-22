@@ -1,0 +1,14 @@
+prefix=/home/quantum/Documents/coin/bdtcoin-0.21.1/depends/x86_64-pc-linux-gnu
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 Network
+Description: Qt Network module
+Version: 5.9.8
+Libs: -L${libdir} -lQt5Network 
+Libs.private: -L/home/quantum/Documents/coin/bdtcoin-0.21.1/depends/x86_64-pc-linux-gnu/lib -lQt5Core -lm -lz -ldl -lpthread -lz 
+Cflags: -I${includedir}/QtNetwork 
+Requires: Qt5Core
+
