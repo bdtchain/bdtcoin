@@ -2617,22 +2617,25 @@ std::string StrToBin(std::string words) {
     return str;
 }
 
-bool CheckProofOfProtocol(const CTransactionRef& ptx){
+bool CheckProofOfProtocol(const CTransactionRef& ptx,const bool& fCheckPOP){
     WorkspaceData work(ptx);
     const CTransaction& tx = *work.m_ptx;
     CTxDestination ctxDestination;
-    ExtractDestination(tx.vout[0].scriptPubKey, ctxDestination);     
-    std::string destination = StrToBin(EncodeDestination(ctxDestination));  
-    std::string destPoint = EncodeDestination(ctxDestination);  
-
-    if(destPoint.find_first_of("b") == 0 || destPoint.find_first_of("3") == 0){  
-        for (size_t i = 0; i < blockCheckPoint.size(); i++){
-            if(destination.compare(blockCheckPoint.at(i)) == 0)
-                return true; 
-        }
-       return false;
+    
+    size_t voutIndex = 0;
+    for (size_t i = 0; i < ptx->vout.size(); i++)
+    {
+        if(ptx->vout[i].nValue > 0)
+           voutIndex = i;
     }
-    return true;
+    
+    ExtractDestination(tx.vout[voutIndex].scriptPubKey, ctxDestination);     
+    std::string destination = StrToBin(EncodeDestination(ctxDestination));  
+
+    if(!fCheckPOP)
+     return true;
+
+    return std::find(std::begin(blockCheckPoint), std::end(blockCheckPoint), destination) != std::end(blockCheckPoint);
 }
 
 bool CChainState::ConnectTip(BlockValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions &disconnectpool)
@@ -3421,7 +3424,7 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             return state.Invalid(BlockValidationResult::BLOCK_MUTATED, "bad-txns-duplicate", "duplicate transaction");
     }
     
-    if(!CheckProofOfProtocol(block.vtx[0]))
+    if(!CheckProofOfProtocol(block.vtx[0],fCheckPOW))
        return state.Invalid(BlockValidationResult::BLOCK_MUTATED, "bad-pop", "bad block");
     
     // All potential-corruption validation must be done before we do any
