@@ -190,7 +190,7 @@ double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex* pin
 /** Calculate the amount of disk space the block & undo files currently use */
 uint64_t CalculateCurrentUsage();
 
-bool CheckProofOfProtocol(const CTransactionRef& ptx);
+bool CheckProofOfProtocol(const CTransactionRef& ptx, const bool& fCheckPOP = true);
 
  struct WorkspaceData {
         WorkspaceData(const CTransactionRef& ptx) : m_ptx(ptx), m_hash(ptx->GetHash()) {}
