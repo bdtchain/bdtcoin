@@ -90,9 +90,9 @@ public:
 
         // Deployment of Taproot (BIPs 340-342)
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].bit = 2;
-        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nStartTime = 1674484045; // January 1th, 2023
-        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nTimeout = 1674484045; // January 1th, 2023
-        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].min_activation_height = 809633; // Approximately November 12th, 2021
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nStartTime = 1766985971; // January 1th, 2023
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nTimeout = 1766985971; // January 1th, 2023
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].min_activation_height = 1209633; // Approximately November 12th, 2021
 
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000100010001");
         consensus.defaultAssumeValid = uint256S("0x00000364f9dbd44d7b0884864e2aa095eff120d1d5a6779bce2de9ff5fab1ebb"); // 0
@@ -125,11 +125,11 @@ public:
         // release ASAP to avoid it where possible.
        
         vSeeds.emplace_back("seeder.quantumchain.cyou."); 
-        vSeeds.emplace_back("dns.quantumchain.cyou."); 
-        vSeeds.emplace_back("quantum1.quantumchain.cyou."); 
-        vSeeds.emplace_back("quantum2.quantumchain.cyou."); 
-        vSeeds.emplace_back("quantum3.quantumchain.cyou."); 
-        vSeeds.emplace_back("quantum4.quantumchain.cyou."); 
+        vSeeds.emplace_back("dns.dns1.quantumchain.cyou."); 
+        vSeeds.emplace_back("quantum1.bdtc1.quantumchain.cyou."); 
+        vSeeds.emplace_back("quantum2.bdtc2.quantumchain.cyou."); 
+        vSeeds.emplace_back("quantum3.bdtc3.quantumchain.cyou."); 
+        vSeeds.emplace_back("quantum4.bdtc4.quantumchain.cyou."); 
         
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,85);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,5);
@@ -157,15 +157,15 @@ public:
                 { 30181, uint256S("000000721e3b6025a7bc37b6fb1a84baee1809b3f910a4c2a8c53c1afb1ffe32")},
                 { 41328, uint256S("0000000183084139c2ed44492711f62643dc955079436ca932cfb84284e34b49")},
                 { 42124, uint256S("0000000a801444a5f7357c9013204c46299fcab67d98faa26a53db6899c34a2a")},
-
+                { 638651, uint256S("000000015128a6a4a816b530bc8815607e78dab34b50e2f5c205ce8270603adb")},
             }
         };
 
         chainTxData = ChainTxData{
             // Data from RPC: getchaintxstats 42124 000000025d526db21f9f14143d9d5dd574e7fe0cf042378787266fef4363131b
-            /* nTime    */ 1664445457,
-            /* nTxCount */ 53798,
-            /* dTxRate  */ 0.03302633466800788,
+            /* nTime    */ 1737554993,
+            /* nTxCount */ 650685,
+            /* dTxRate  */ 0.008746399341832049,
         };
     }
 };
