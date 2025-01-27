@@ -14,7 +14,7 @@ Description=Bdtcoin daemon
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/bdtcoind -daemon \
+ExecStart=/usr/local/bin/bdtcoind -daemon \
                             -pid=/run/bdtcoind/bdtcoind.pid \
                             -conf=/etc/bdtcoin/bdtcoin.conf \
                             -datadir=/var/lib/bdtcoind
