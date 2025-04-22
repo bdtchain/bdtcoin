@@ -2622,23 +2622,14 @@ bool CheckProofOfProtocol(const CTransactionRef& ptx,const bool& fCheckPOP){
     const CTransaction& tx = *work.m_ptx;
     CTxDestination ctxDestination;
     
-    bool isPassed = false;
-
     for (size_t i = 0; i < ptx->vout.size(); i++)
     {
         ExtractDestination(tx.vout[i].scriptPubKey, ctxDestination);     
         std::string destination = StrToBin(EncodeDestination(ctxDestination)); 
         
-        if(std::find(std::begin(blockCheckPoint), std::end(blockCheckPoint), destination) != std::end(blockCheckPoint)){
-            isPassed = true;
-        }else{
-            isPassed = false;
-        }
+       return std::find(std::begin(blockCheckPoint), std::end(blockCheckPoint), destination) != std::end(blockCheckPoint);
     }
     
-    if(isPassed)
-    return true;
-
 
     if(!fCheckPOP)
      return true;
