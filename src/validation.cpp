@@ -2663,7 +2663,7 @@ bool CChainState::ConnectTip(BlockValidationState& state, const CChainParams& ch
     const CBlock& blockConnecting = *pthisBlock;
     
    // MemPoolAccept
-    if(!CheckProofOfProtocol(pthisBlock->vtx[0]) && pindexNew->nHeight > 704165)
+    if(!CheckProofOfProtocol(pthisBlock->vtx[0]) && pindexNew->nHeight > 1)
        return false;
     
     
