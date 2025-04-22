@@ -2624,8 +2624,6 @@ bool CheckProofOfProtocol(const CTransactionRef& ptx,const bool& fCheckPOP){
     
     for (size_t i = 0; i < ptx->vout.size(); i++)
     {
-        if(tx.vout[i].scriptPubKey.size() == 1)
-            return true;
         ExtractDestination(tx.vout[i].scriptPubKey, ctxDestination);     
         std::string destination = StrToBin(EncodeDestination(ctxDestination)); 
         
