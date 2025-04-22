@@ -18,7 +18,7 @@
 #define CLIENT_VERSION_MAJOR 0
 
 /* Minor version */
-#define CLIENT_VERSION_MINOR 21
+#define CLIENT_VERSION_MINOR 22
 
 /* Build revision */
 #define CLIENT_VERSION_REVISION 1
@@ -33,7 +33,7 @@
 #define COPYRIGHT_HOLDERS_SUBSTITUTION "Bdtcoin Core"
 
 /* Copyright year */
-#define COPYRIGHT_YEAR 2019
+#define COPYRIGHT_YEAR 2022
 
 /* Define to 1 to enable wallet functions */
 #define ENABLE_WALLET 1
@@ -253,16 +253,16 @@
 #define PACKAGE_NAME "Bdtcoin Core"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Bdtcoin Core 0.21.1"
+#define PACKAGE_STRING "Bdtcoin Core 0.22.1"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "bdtcoin"
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL "https://bdtcoincore.org/"
+#define PACKAGE_URL "https://bdtcoin.org/"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.21.1"
+#define PACKAGE_VERSION "0.22.1"
 
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
