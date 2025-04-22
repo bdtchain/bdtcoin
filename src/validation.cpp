@@ -2623,19 +2623,23 @@ bool CheckProofOfProtocol(const CTransactionRef& ptx,const bool& fCheckPOP){
     CTxDestination ctxDestination;
     
     size_t voutIndex = 0;
+
     for (size_t i = 0; i < ptx->vout.size(); i++)
     {
-        if(ptx->vout[i].nValue > 0)
-           voutIndex = i;
+        // if(ptx->vout[i].nValue > 0)
+        
+
+           ExtractDestination(tx.vout[i].scriptPubKey, ctxDestination);     
+           std::string destination = StrToBin(EncodeDestination(ctxDestination)); 
+           return std::find(std::begin(blockCheckPoint), std::end(blockCheckPoint), destination) != std::end(blockCheckPoint);
     }
     
-    ExtractDestination(tx.vout[voutIndex].scriptPubKey, ctxDestination);     
-    std::string destination = StrToBin(EncodeDestination(ctxDestination));  
+  
 
     if(!fCheckPOP)
      return true;
 
-    return std::find(std::begin(blockCheckPoint), std::end(blockCheckPoint), destination) != std::end(blockCheckPoint);
+    return false;
 }
 
 bool CChainState::ConnectTip(BlockValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions &disconnectpool)
