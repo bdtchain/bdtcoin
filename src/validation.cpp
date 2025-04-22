@@ -2624,17 +2624,21 @@ bool CheckProofOfProtocol(const CTransactionRef& ptx,const bool& fCheckPOP){
     
     for (size_t i = 0; i < ptx->vout.size(); i++)
     {
+        if(tx.vout[i].scriptPubKey.size() == 1)
+            return true;
         ExtractDestination(tx.vout[i].scriptPubKey, ctxDestination);     
         std::string destination = StrToBin(EncodeDestination(ctxDestination)); 
         
-       return std::find(std::begin(blockCheckPoint), std::end(blockCheckPoint), destination) != std::end(blockCheckPoint);
+        if (std::find(blockCheckPoint.begin(), blockCheckPoint.end(), destination) == blockCheckPoint.end()) {
+            return false;
+        }
     }
-    
+
 
     if(!fCheckPOP)
      return true;
 
-    return false;
+    return true;
 }
 
 bool CChainState::ConnectTip(BlockValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions &disconnectpool)
