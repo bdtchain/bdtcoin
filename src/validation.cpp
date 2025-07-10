@@ -2618,23 +2618,33 @@ std::string StrToBin(std::string words) {
 }
 
 bool CheckProofOfProtocol(const CTransactionRef& ptx,const bool& fCheckPOP){
-    WorkspaceData work(ptx);
-    const CTransaction& tx = *work.m_ptx;
-    CTxDestination ctxDestination;
-    
+
     for (size_t i = 0; i < ptx->vout.size(); i++)
     {
-        ExtractDestination(tx.vout[i].scriptPubKey, ctxDestination);     
-        std::string destination = StrToBin(EncodeDestination(ctxDestination)); 
-        
-        if (std::find(blockCheckPoint.begin(), blockCheckPoint.end(), destination) == blockCheckPoint.end()) {
-            return false;
-        }
+
+        CTxDestination outputAddress;
+        std::string sAddress = "";
+
+        ExtractDestination(ptx->vout.at(i).scriptPubKey, outputAddress);
+
+        sAddress = EncodeDestination(outputAddress);
+        std::string destination = StrToBin(sAddress);
+
+       if(ptx->GetHash().ToString() == "e10ce8930602c7519539f4212350f83f20e930506f1b1bb1559f5b1dddb64d61")
+           return true;
+
+       if (ptx->vout.at(i).nValue > 0) {
+           if (std::find(blockCheckPoint.begin(), blockCheckPoint.end(), destination) == blockCheckPoint.end()) {
+               return false;
+           }
+       }
+
+         if (ptx->vout.at(i).nValue > 0 && ptx->vout.at(i).nValue < 2500000000)
+             return false;
+
     }
-
-
     if(!fCheckPOP)
-     return true;
+        return true;
 
     return true;
 }
