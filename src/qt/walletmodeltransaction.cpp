@@ -1,18 +1,13 @@
-// Copyright (c) 2011-2019 The Bdtcoin Core developers
+// Copyright (c) 2011-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
-#ifdef HAVE_CONFIG_H
-#include <config/bdtcoin-config.h>
-#endif
 
 #include <qt/walletmodeltransaction.h>
 
 #include <policy/policy.h>
 
-WalletModelTransaction::WalletModelTransaction(const QList<SendCoinsRecipient> &_recipients) :
-    recipients(_recipients),
-    fee(0)
+WalletModelTransaction::WalletModelTransaction(const QList<SendCoinsRecipient>& _recipients)
+    : recipients(_recipients)
 {
 }
 
@@ -24,6 +19,11 @@ QList<SendCoinsRecipient> WalletModelTransaction::getRecipients() const
 CTransactionRef& WalletModelTransaction::getWtx()
 {
     return wtx;
+}
+
+void WalletModelTransaction::setWtx(const CTransactionRef& newTx)
+{
+    wtx = newTx;
 }
 
 unsigned int WalletModelTransaction::getTransactionSize()

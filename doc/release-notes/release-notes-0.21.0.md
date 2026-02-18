@@ -100,7 +100,7 @@ P2P and network changes
 - This release adds support for serving
   [BIP157](https://github.com/bdtcoin/bips/blob/master/bip-0157.mediawiki) compact
   filters to peers on the network when enabled using
-  `-blockfilterindex=1 -peercfilters=1`. (#16442)
+  `-blockfilterindex=1 -peerblockfilters=1`. (#16442)
 
 - This release adds support for signets
   ([BIP325](https://github.com/bdtcoin/bips/blob/master/bip-0325.mediawiki)) in
@@ -467,7 +467,7 @@ was already being broken by the move to descriptors.
   command line setting. The wallet will already fail to create transactions
   with fees higher than `-maxtxfee`. (#18467)
 
-- A new `fee_rate` parameter/option denominated in juss per vbyte (sat/vB)
+- A new `fee_rate` parameter/option denominated in satoshis per vbyte (sat/vB)
   is introduced to the `sendtoaddress`, `sendmany`, `fundrawtransaction` and
   `walletcreatefundedpsbt` RPCs as well as to the experimental new `send`
   RPC. The legacy `feeRate` option in `fundrawtransaction` and
@@ -1094,7 +1094,7 @@ Tests
 - #18629 scripts: Add pe .reloc section check to security-check.py (fanquake)
 - #18437 util: `Detect posix_fallocate()` instead of assuming (vasild)
 - #18413 script: Prevent ub when computing abs value for num opcode serialize (pierreN)
-- #17993 lockedpool: avoid sensitive data in core files (FreeBSD) (vasild)
+- #18443 lockedpool: avoid sensitive data in core files (FreeBSD) (vasild)
 - #18885 contrib: Move optimize-pngs.py script to the maintainer repo (MarcoFalke)
 - #18317 Serialization improvements step 6 (all except wallet/gui) (sipa)
 - #16127 More thread safety annotation coverage (ajtowns)

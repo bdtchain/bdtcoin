@@ -1,13 +1,18 @@
-// Copyright (c) 2016-2020 The Bdtcoin Core developers
+// Copyright (c) 2016-2022 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
 #include <coins.h>
+#include <consensus/amount.h>
+#include <key.h>
 #include <policy/policy.h>
+#include <primitives/transaction.h>
+#include <script/script.h>
 #include <script/signingprovider.h>
 #include <test/util/transaction_utils.h>
 
+#include <cassert>
 #include <vector>
 
 // Microbenchmark for simple accesses to a CCoinsViewCache database. Note from
@@ -18,8 +23,7 @@
 // (https://github.com/bdtchain/bdtcoin/issues/7883#issuecomment-224807484)
 static void CCoinsCaching(benchmark::Bench& bench)
 {
-    const ECCVerifyHandle verify_handle;
-    ECC_Start();
+    ECC_Context ecc_context{};
 
     FillableSigningProvider keystore;
     CCoinsView coinsDummy;
@@ -45,10 +49,9 @@ static void CCoinsCaching(benchmark::Bench& bench)
     // Benchmark.
     const CTransaction tx_1(t1);
     bench.run([&] {
-        bool success = AreInputsStandard(tx_1, coins, false);
+        bool success{AreInputsStandard(tx_1, coins)};
         assert(success);
     });
-    ECC_Stop();
 }
 
-BENCHMARK(CCoinsCaching);
+BENCHMARK(CCoinsCaching, benchmark::PriorityLevel::HIGH);

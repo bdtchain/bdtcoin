@@ -1,5 +1,5 @@
-// Copyright (c) 2019-2020 Johir Uddin Sultan
-// Copyright (c) 2020-2021 The Bdtcoin Core developers
+// Copyright (c) 2018-2025 JUS
+// Copyright (c) 2018-2025 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -179,4 +179,4 @@ private:
 };
 
 
-#endif // BDTCOIN_TEST_BIGNUM_H
+#endif // BDTCOIN_TEST_SCRIPTNUM10_H

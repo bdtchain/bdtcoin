@@ -1,8 +1,10 @@
-// Copyright (c) 2020 The Bdtcoin Core developers
+// Copyright (c) 2020-2022 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/context.h>
 
-WalletContext::WalletContext() {}
-WalletContext::~WalletContext() {}
+namespace wallet {
+WalletContext::WalletContext() = default;
+WalletContext::~WalletContext() = default;
+} // namespace wallet

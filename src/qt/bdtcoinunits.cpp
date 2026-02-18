@@ -1,12 +1,16 @@
-// Copyright (c) 2011-2019 The Bdtcoin Core developers
+// Copyright (c) 2011-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/bdtcoinunits.h>
 
+#include <consensus/amount.h>
+
 #include <QStringList>
 
 #include <cassert>
+
+static constexpr auto MAX_DIGITS_BDTC = 16;
 
 BdtcoinUnits::BdtcoinUnits(QObject *parent):
         QAbstractListModel(parent),
@@ -14,101 +18,84 @@ BdtcoinUnits::BdtcoinUnits(QObject *parent):
 {
 }
 
-QList<BdtcoinUnits::Unit> BdtcoinUnits::availableUnits()
+QList<BdtcoinUnit> BdtcoinUnits::availableUnits()
 {
-    QList<BdtcoinUnits::Unit> unitlist;
-    unitlist.append(BDTC);
-    unitlist.append(mBDTC);
-    unitlist.append(uBDTC);
-    unitlist.append(SAT);
+    QList<BdtcoinUnit> unitlist;
+    unitlist.append(Unit::BDTC);
+    unitlist.append(Unit::mBDTC);
+    unitlist.append(Unit::uBDTC);
+    unitlist.append(Unit::SAT);
     return unitlist;
 }
 
-bool BdtcoinUnits::valid(int unit)
+QString BdtcoinUnits::longName(Unit unit)
 {
-    switch(unit)
-    {
-    case BDTC:
-    case mBDTC:
-    case uBDTC:
-    case SAT:
-        return true;
-    default:
-        return false;
-    }
+    switch (unit) {
+    case Unit::BDTC: return QString("BDTC");
+    case Unit::mBDTC: return QString("mBDTC");
+    case Unit::uBDTC: return QString::fromUtf8("µBDTC (bits)");
+    case Unit::SAT: return QString("Jus (jus)");
+    } // no default case, so the compiler can warn about missing cases
+    assert(false);
 }
 
-QString BdtcoinUnits::longName(int unit)
+QString BdtcoinUnits::shortName(Unit unit)
 {
-    switch(unit)
-    {
-    case BDTC: return QString("BDTC");
-    case mBDTC: return QString("mBDTC");
-    case uBDTC: return QString::fromUtf8("µBDTC (bits)");
-    case SAT: return QString("Jus (sat)");
-    default: return QString("???");
-    }
+    switch (unit) {
+    case Unit::BDTC: return longName(unit);
+    case Unit::mBDTC: return longName(unit);
+    case Unit::uBDTC: return QString("bits");
+    case Unit::SAT: return QString("sat");
+    } // no default case, so the compiler can warn about missing cases
+    assert(false);
 }
 
-QString BdtcoinUnits::shortName(int unit)
+QString BdtcoinUnits::description(Unit unit)
 {
-    switch(unit)
-    {
-    case uBDTC: return QString::fromUtf8("bits");
-    case SAT: return QString("sat");
-    default: return longName(unit);
-    }
+    switch (unit) {
+    case Unit::BDTC: return QString("Bdtcoins");
+    case Unit::mBDTC: return QString("Milli-Bdtcoins (1 / 1" THIN_SP_UTF8 "000)");
+    case Unit::uBDTC: return QString("Micro-Bdtcoins (bits) (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
+    case Unit::SAT: return QString("Jus (jus) (1 / 100" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
+    } // no default case, so the compiler can warn about missing cases
+    assert(false);
 }
 
-QString BdtcoinUnits::description(int unit)
+qint64 BdtcoinUnits::factor(Unit unit)
 {
-    switch(unit)
-    {
-    case BDTC: return QString("Bdtcoins");
-    case mBDTC: return QString("Milli-Bdtcoins (1 / 1" THIN_SP_UTF8 "000)");
-    case uBDTC: return QString("Micro-Bdtcoins (bits) (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
-    case SAT: return QString("Jus (sat) (1 / 100" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
-    default: return QString("???");
-    }
+    switch (unit) {
+    case Unit::BDTC: return 100'000'000;
+    case Unit::mBDTC: return 100'000;
+    case Unit::uBDTC: return 100;
+    case Unit::SAT: return 1;
+    } // no default case, so the compiler can warn about missing cases
+    assert(false);
 }
 
-qint64 BdtcoinUnits::factor(int unit)
+int BdtcoinUnits::decimals(Unit unit)
 {
-    switch(unit)
-    {
-    case BDTC: return 100000000;
-    case mBDTC: return 100000;
-    case uBDTC: return 100;
-    case SAT: return 1;
-    default: return 100000000;
-    }
+    switch (unit) {
+    case Unit::BDTC: return 8;
+    case Unit::mBDTC: return 5;
+    case Unit::uBDTC: return 2;
+    case Unit::SAT: return 0;
+    } // no default case, so the compiler can warn about missing cases
+    assert(false);
 }
 
-int BdtcoinUnits::decimals(int unit)
-{
-    switch(unit)
-    {
-    case BDTC: return 8;
-    case mBDTC: return 5;
-    case uBDTC: return 2;
-    case SAT: return 0;
-    default: return 0;
-    }
-}
-
-QString BdtcoinUnits::format(int unit, const CAmount& nIn, bool fPlus, SeparatorStyle separators, bool justify)
+QString BdtcoinUnits::format(Unit unit, const CAmount& nIn, bool fPlus, SeparatorStyle separators, bool justify)
 {
     // Note: not using straight sprintf here because we do NOT want
     // localized number formatting.
-    if(!valid(unit))
-        return QString(); // Refuse to format invalid unit
     qint64 n = (qint64)nIn;
     qint64 coin = factor(unit);
     int num_decimals = decimals(unit);
     qint64 n_abs = (n > 0 ? n : -n);
     qint64 quotient = n_abs / coin;
     QString quotient_str = QString::number(quotient);
-    if (justify) quotient_str = quotient_str.rightJustified(16 - num_decimals, ' ');
+    if (justify) {
+        quotient_str = quotient_str.rightJustified(MAX_DIGITS_BDTC - num_decimals, ' ');
+    }
 
     // Use SI-style thin space separators as these are locale independent and can't be
     // confused with the decimal marker.
@@ -141,19 +128,19 @@ QString BdtcoinUnits::format(int unit, const CAmount& nIn, bool fPlus, Separator
 // Please take care to use formatHtmlWithUnit instead, when
 // appropriate.
 
-QString BdtcoinUnits::formatWithUnit(int unit, const CAmount& amount, bool plussign, SeparatorStyle separators)
+QString BdtcoinUnits::formatWithUnit(Unit unit, const CAmount& amount, bool plussign, SeparatorStyle separators)
 {
     return format(unit, amount, plussign, separators) + QString(" ") + shortName(unit);
 }
 
-QString BdtcoinUnits::formatHtmlWithUnit(int unit, const CAmount& amount, bool plussign, SeparatorStyle separators)
+QString BdtcoinUnits::formatHtmlWithUnit(Unit unit, const CAmount& amount, bool plussign, SeparatorStyle separators)
 {
     QString str(formatWithUnit(unit, amount, plussign, separators));
     str.replace(QChar(THIN_SP_CP), QString(THIN_SP_HTML));
     return QString("<span style='white-space: nowrap;'>%1</span>").arg(str);
 }
 
-QString BdtcoinUnits::formatWithPrivacy(int unit, const CAmount& amount, SeparatorStyle separators, bool privacy)
+QString BdtcoinUnits::formatWithPrivacy(Unit unit, const CAmount& amount, SeparatorStyle separators, bool privacy)
 {
     assert(amount >= 0);
     QString value;
@@ -165,10 +152,11 @@ QString BdtcoinUnits::formatWithPrivacy(int unit, const CAmount& amount, Separat
     return value + QString(" ") + shortName(unit);
 }
 
-bool BdtcoinUnits::parse(int unit, const QString &value, CAmount *val_out)
+bool BdtcoinUnits::parse(Unit unit, const QString& value, CAmount* val_out)
 {
-    if(!valid(unit) || value.isEmpty())
+    if (value.isEmpty()) {
         return false; // Refuse to parse invalid unit or empty string
+    }
     int num_decimals = decimals(unit);
 
     // Ignore spaces and thin spaces when parsing
@@ -178,7 +166,7 @@ bool BdtcoinUnits::parse(int unit, const QString &value, CAmount *val_out)
     {
         return false; // More than one dot
     }
-    QString whole = parts[0];
+    const QString& whole = parts[0];
     QString decimals;
 
     if(parts.size() > 1)
@@ -204,14 +192,9 @@ bool BdtcoinUnits::parse(int unit, const QString &value, CAmount *val_out)
     return ok;
 }
 
-QString BdtcoinUnits::getAmountColumnTitle(int unit)
+QString BdtcoinUnits::getAmountColumnTitle(Unit unit)
 {
-    QString amountTitle = QObject::tr("Amount");
-    if (BdtcoinUnits::valid(unit))
-    {
-        amountTitle += " ("+BdtcoinUnits::shortName(unit) + ")";
-    }
-    return amountTitle;
+    return QObject::tr("Amount") + " (" + shortName(unit) + ")";
 }
 
 int BdtcoinUnits::rowCount(const QModelIndex &parent) const
@@ -234,7 +217,7 @@ QVariant BdtcoinUnits::data(const QModelIndex &index, int role) const
         case Qt::ToolTipRole:
             return QVariant(description(unit));
         case UnitRole:
-            return QVariant(static_cast<int>(unit));
+            return QVariant::fromValue(unit);
         }
     }
     return QVariant();
@@ -243,4 +226,41 @@ QVariant BdtcoinUnits::data(const QModelIndex &index, int role) const
 CAmount BdtcoinUnits::maxMoney()
 {
     return MAX_MONEY;
+}
+
+namespace {
+qint8 ToQint8(BdtcoinUnit unit)
+{
+    switch (unit) {
+    case BdtcoinUnit::BDTC: return 0;
+    case BdtcoinUnit::mBDTC: return 1;
+    case BdtcoinUnit::uBDTC: return 2;
+    case BdtcoinUnit::SAT: return 3;
+    } // no default case, so the compiler can warn about missing cases
+    assert(false);
+}
+
+BdtcoinUnit FromQint8(qint8 num)
+{
+    switch (num) {
+    case 0: return BdtcoinUnit::BDTC;
+    case 1: return BdtcoinUnit::mBDTC;
+    case 2: return BdtcoinUnit::uBDTC;
+    case 3: return BdtcoinUnit::SAT;
+    }
+    assert(false);
+}
+} // namespace
+
+QDataStream& operator<<(QDataStream& out, const BdtcoinUnit& unit)
+{
+    return out << ToQint8(unit);
+}
+
+QDataStream& operator>>(QDataStream& in, BdtcoinUnit& unit)
+{
+    qint8 input;
+    in >> input;
+    unit = FromQint8(input);
+    return in;
 }

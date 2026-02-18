@@ -1,32 +1,28 @@
-// Copyright (c) 2017-2019 The Bdtcoin Core developers
+// Copyright (c) 2017-2022 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/walletutil.h>
 
+#include <chainparams.h>
+#include <common/args.h>
+#include <key_io.h>
 #include <logging.h>
-#include <util/system.h>
 
-bool ExistsBerkeleyDatabase(const fs::path& path);
-#ifdef USE_SQLITE
-bool ExistsSQLiteDatabase(const fs::path& path);
-#else
-#   define ExistsSQLiteDatabase(path)  (false)
-#endif
-
+namespace wallet {
 fs::path GetWalletDir()
 {
     fs::path path;
 
     if (gArgs.IsArgSet("-walletdir")) {
-        path = gArgs.GetArg("-walletdir", "");
+        path = gArgs.GetPathArg("-walletdir");
         if (!fs::is_directory(path)) {
             // If the path specified doesn't exist, we return the deliberately
             // invalid empty string.
             path = "";
         }
     } else {
-        path = GetDataDir();
+        path = gArgs.GetDataDirNet();
         // If a wallets directory exists, use that, otherwise default to GetDataDir
         if (fs::is_directory(path / "wallets")) {
             path /= "wallets";
@@ -36,50 +32,6 @@ fs::path GetWalletDir()
     return path;
 }
 
-std::vector<fs::path> ListWalletDir()
-{
-    const fs::path wallet_dir = GetWalletDir();
-    const size_t offset = wallet_dir.string().size() + 1;
-    std::vector<fs::path> paths;
-    boost::system::error_code ec;
-
-    for (auto it = fs::recursive_directory_iterator(wallet_dir, ec); it != fs::recursive_directory_iterator(); it.increment(ec)) {
-        if (ec) {
-            LogPrintf("%s: %s %s\n", __func__, ec.message(), it->path().string());
-            continue;
-        }
-
-        try {
-            // Get wallet path relative to walletdir by removing walletdir from the wallet path.
-            // This can be replaced by boost::filesystem::lexically_relative once boost is bumped to 1.60.
-            const fs::path path = it->path().string().substr(offset);
-
-            if (it->status().type() == fs::directory_file &&
-                (ExistsBerkeleyDatabase(it->path()) || ExistsSQLiteDatabase(it->path()))) {
-                // Found a directory which contains wallet.dat btree file, add it as a wallet.
-                paths.emplace_back(path);
-            } else if (it.level() == 0 && it->symlink_status().type() == fs::regular_file && ExistsBerkeleyDatabase(it->path())) {
-                if (it->path().filename() == "wallet.dat") {
-                    // Found top-level wallet.dat btree file, add top level directory ""
-                    // as a wallet.
-                    paths.emplace_back();
-                } else {
-                    // Found top-level btree file not called wallet.dat. Current bdtcoin
-                    // software will never create these files but will allow them to be
-                    // opened in a shared database environment for backwards compatibility.
-                    // Add it to the list of available wallets.
-                    paths.emplace_back(path);
-                }
-            }
-        } catch (const std::exception& e) {
-            LogPrintf("%s: Error scanning %s: %s\n", __func__, it->path().string(), e.what());
-            it.no_push();
-        }
-    }
-
-    return paths;
-}
-
 bool IsFeatureSupported(int wallet_version, int feature_version)
 {
     return wallet_version >= feature_version;
@@ -87,9 +39,64 @@ bool IsFeatureSupported(int wallet_version, int feature_version)
 
 WalletFeature GetClosestWalletFeature(int version)
 {
-    const std::array<WalletFeature, 8> wallet_features{{FEATURE_LATEST, FEATURE_PRE_SPLIT_KEYPOOL, FEATURE_NO_DEFAULT_KEY, FEATURE_HD_SPLIT, FEATURE_HD, FEATURE_COMPRPUBKEY, FEATURE_WALLETCRYPT, FEATURE_BASE}};
+    static constexpr std::array wallet_features{FEATURE_LATEST, FEATURE_PRE_SPLIT_KEYPOOL, FEATURE_NO_DEFAULT_KEY, FEATURE_HD_SPLIT, FEATURE_HD, FEATURE_COMPRPUBKEY, FEATURE_WALLETCRYPT, FEATURE_BASE};
     for (const WalletFeature& wf : wallet_features) {
         if (version >= wf) return wf;
     }
     return static_cast<WalletFeature>(0);
 }
+
+WalletDescriptor GenerateWalletDescriptor(const CExtPubKey& master_key, const OutputType& addr_type, bool internal)
+{
+    int64_t creation_time = GetTime();
+
+    std::string xpub = EncodeExtPubKey(master_key);
+
+    // Build descriptor string
+    std::string desc_prefix;
+    std::string desc_suffix = "/*)";
+    switch (addr_type) {
+    case OutputType::LEGACY: {
+        desc_prefix = "pkh(" + xpub + "/44h";
+        break;
+    }
+    case OutputType::P2SH_SEGWIT: {
+        desc_prefix = "sh(wpkh(" + xpub + "/49h";
+        desc_suffix += ")";
+        break;
+    }
+    case OutputType::BECH32: {
+        desc_prefix = "wpkh(" + xpub + "/84h";
+        break;
+    }
+    case OutputType::BECH32M: {
+        desc_prefix = "tr(" + xpub + "/86h";
+        break;
+    }
+    case OutputType::UNKNOWN: {
+        // We should never have a DescriptorScriptPubKeyMan for an UNKNOWN OutputType,
+        // so if we get to this point something is wrong
+        assert(false);
+    }
+    } // no default case, so the compiler can warn about missing cases
+    assert(!desc_prefix.empty());
+
+    // Mainnet derives at 0', testnet and regtest derive at 1'
+    if (Params().IsTestChain()) {
+        desc_prefix += "/1h";
+    } else {
+        desc_prefix += "/0h";
+    }
+
+    std::string internal_path = internal ? "/1" : "/0";
+    std::string desc_str = desc_prefix + "/0h" + internal_path + desc_suffix;
+
+    // Make the descriptor
+    FlatSigningProvider keys;
+    std::string error;
+    std::vector<std::unique_ptr<Descriptor>> desc = Parse(desc_str, keys, error, false);
+    WalletDescriptor w_desc(std::move(desc.at(0)), creation_time, 0, 0, 0);
+    return w_desc;
+}
+
+} // namespace wallet

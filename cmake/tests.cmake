@@ -1,0 +1,15 @@
+# Copyright (c) 2023-present The Bdtcoin Core developers
+# Distributed under the MIT software license, see the accompanying
+# file COPYING or https://opensource.org/license/mit/.
+
+if(TARGET bdtcoin-util AND TARGET bdtcoin-tx AND PYTHON_COMMAND)
+  add_test(NAME util_test_runner
+    COMMAND ${CMAKE_COMMAND} -E env BDTCOINUTIL=$<TARGET_FILE:bdtcoin-util> BDTCOINTX=$<TARGET_FILE:bdtcoin-tx> ${PYTHON_COMMAND} ${PROJECT_BINARY_DIR}/test/util/test_runner.py
+  )
+endif()
+
+if(PYTHON_COMMAND)
+  add_test(NAME util_rpcauth_test
+    COMMAND ${PYTHON_COMMAND} ${PROJECT_BINARY_DIR}/test/util/rpcauth-test.py
+  )
+endif()

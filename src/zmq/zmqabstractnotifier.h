@@ -1,12 +1,12 @@
-// Copyright (c) 2015-2018 The Bdtcoin Core developers
+// Copyright (c) 2015-2022 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BDTCOIN_ZMQ_ZMQABSTRACTNOTIFIER_H
 #define BDTCOIN_ZMQ_ZMQABSTRACTNOTIFIER_H
 
-#include <util/memory.h>
-
+#include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -14,20 +14,20 @@ class CBlockIndex;
 class CTransaction;
 class CZMQAbstractNotifier;
 
-using CZMQNotifierFactory = std::unique_ptr<CZMQAbstractNotifier> (*)();
+using CZMQNotifierFactory = std::function<std::unique_ptr<CZMQAbstractNotifier>()>;
 
 class CZMQAbstractNotifier
 {
 public:
     static const int DEFAULT_ZMQ_SNDHWM {1000};
 
-    CZMQAbstractNotifier() : psocket(nullptr), outbound_message_high_water_mark(DEFAULT_ZMQ_SNDHWM) { }
+    CZMQAbstractNotifier() : outbound_message_high_water_mark(DEFAULT_ZMQ_SNDHWM) {}
     virtual ~CZMQAbstractNotifier();
 
     template <typename T>
     static std::unique_ptr<CZMQAbstractNotifier> Create()
     {
-        return MakeUnique<T>();
+        return std::make_unique<T>();
     }
 
     std::string GetType() const { return type; }
@@ -58,7 +58,7 @@ public:
     virtual bool NotifyTransaction(const CTransaction &transaction);
 
 protected:
-    void *psocket;
+    void* psocket{nullptr};
     std::string type;
     std::string address;
     int outbound_message_high_water_mark; // aka SNDHWM

@@ -18,11 +18,9 @@ We use automated scripts to help extract translations in both Qt, and non-Qt sou
 
 To automatically regenerate the `bdtcoin_en.ts` file, run the following commands:
 ```sh
-cd src/
-make translate
+cmake --preset dev-mode -DWITH_USDT=OFF -DWITH_MULTIPROCESS=OFF
+cmake --build build_dev_mode --target translate
 ```
-
-`contrib/bdtcoin-qt.pro` takes care of generating `.qm` (binary compiled) files from `.ts` (source files) files. It’s mostly automated, and you shouldn’t need to worry about it.
 
 **Example Qt translation**
 ```cpp
@@ -46,36 +44,17 @@ Visit the [Transifex Signup](https://www.transifex.com/signup/) page to create a
 You can find the Bdtcoin translation project at [https://www.transifex.com/bdtcoin/bdtcoin/](https://www.transifex.com/bdtcoin/bdtcoin/).
 
 ### Installing the Transifex client command-line tool
-The client is used to fetch updated translations. If you are having problems, or need more details, see [https://docs.transifex.com/client/installing-the-client](https://docs.transifex.com/client/installing-the-client)
-
-`pip install transifex-client`
-
-Setup your Transifex client config as follows. Please *ignore the token field*.
-
-```ini
-nano ~/.transifexrc
-
-[https://www.transifex.com]
-hostname = https://www.transifex.com
-password = PASSWORD
-token =
-username = USERNAME
-```
+The client is used to fetch updated translations. Please check installation instructions and any other details at https://developers.transifex.com/docs/cli.
 
 The Transifex Bdtcoin project config file is included as part of the repo. It can be found at `.tx/config`, however you shouldn’t need to change anything.
 
 ### Synchronising translations
-To assist in updating translations, a helper script is available in the [maintainer-tools repo](https://github.com/bdtcoin-core/bdtcoin-maintainer-tools).
 
-1. `python3 ../bdtcoin-maintainer-tools/update-translations.py`
-2. `git add` new translations from `src/qt/locale/`
-3. Update `src/qt/bdtcoin_locale.qrc` manually or via
-```bash
-git ls-files src/qt/locale/*ts|xargs -n1 basename|sed 's/\(bdtcoin_\(.*\)\).ts/        <file alias="\2">locale\/\1.qm<\/file>/'
+To assist in updating translations, a helper script is available in the [maintainer-tools repo](https://github.com/bdtcoin-core/bdtcoin-maintainer-tools). To use it and commit the result, simply do:
+
 ```
-4. Update `src/Makefile.qt_locale.include` manually or via
-```bash
-git ls-files src/qt/locale/*ts|xargs -n1 basename|sed 's/\(bdtcoin_\(.*\)\).ts/  qt\/locale\/\1.ts \\/'
+python3 ../bdtcoin-maintainer-tools/update-translations.py
+git commit -a
 ```
 
 **Do not directly download translations** one by one from the Transifex website, as we do a few post-processing steps before committing the translations.
@@ -104,6 +83,5 @@ To create a new language template, you will need to edit the languages manifest 
 **Note:** that the language translation file **must end in `.qm`** (the compiled extension), and not `.ts`.
 
 ### Questions and general assistance
-The Bdtcoin-Core translation maintainers include *tcatm, seone, Diapolo, wumpus and luke-jr*. You can find them, and others, in the Freenode IRC chatroom - `irc.freenode.net #bdtcoin-core-dev`.
 
 If you are a translator, you should also subscribe to the mailing list, https://groups.google.com/forum/#!forum/bdtcoin-translators. Announcements will be posted during application pre-releases to notify translators to check for updates.

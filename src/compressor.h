@@ -1,19 +1,31 @@
-// Copyright (c) 2019-2020 Johir Uddin Sultan
-// Copyright (c) 2020-2021 The Bdtcoin Core developers
+// Copyright (c) 2018-2025 JUS
+// Copyright (c) 2018-2025 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BDTCOIN_COMPRESSOR_H
 #define BDTCOIN_COMPRESSOR_H
 
+#include <prevector.h>
 #include <primitives/transaction.h>
 #include <script/script.h>
 #include <serialize.h>
 #include <span.h>
 
-bool CompressScript(const CScript& script, std::vector<unsigned char> &out);
+/**
+ * This saves us from making many heap allocations when serializing
+ * and deserializing compressed scripts.
+ *
+ * This prevector size is determined by the largest .resize() in the
+ * CompressScript function. The largest compressed script format is a
+ * compressed public key, which is 33 bytes.
+ */
+using CompressedScript = prevector<33, unsigned char>;
+
+
+bool CompressScript(const CScript& script, CompressedScript& out);
 unsigned int GetSpecialScriptSize(unsigned int nSize);
-bool DecompressScript(CScript& script, unsigned int nSize, const std::vector<unsigned char> &out);
+bool DecompressScript(CScript& script, unsigned int nSize, const CompressedScript& in);
 
 /**
  * Compress amount.
@@ -43,22 +55,22 @@ struct ScriptCompression
 {
     /**
      * make this static for now (there are only 6 special scripts defined)
-     * this can potentially be extended together with a new nVersion for
-     * transactions, in which case this value becomes dependent on nVersion
+     * this can potentially be extended together with a new version for
+     * transactions, in which case this value becomes dependent on version
      * and nHeight of the enclosing transaction.
      */
     static const unsigned int nSpecialScripts = 6;
 
     template<typename Stream>
     void Ser(Stream &s, const CScript& script) {
-        std::vector<unsigned char> compr;
+        CompressedScript compr;
         if (CompressScript(script, compr)) {
-            s << MakeSpan(compr);
+            s << Span{compr};
             return;
         }
         unsigned int nSize = script.size() + nSpecialScripts;
         s << VARINT(nSize);
-        s << MakeSpan(script);
+        s << Span{script};
     }
 
     template<typename Stream>
@@ -66,8 +78,8 @@ struct ScriptCompression
         unsigned int nSize = 0;
         s >> VARINT(nSize);
         if (nSize < nSpecialScripts) {
-            std::vector<unsigned char> vch(GetSpecialScriptSize(nSize), 0x00);
-            s >> MakeSpan(vch);
+            CompressedScript vch(GetSpecialScriptSize(nSize), 0x00);
+            s >> Span{vch};
             DecompressScript(script, nSize, vch);
             return;
         }
@@ -78,7 +90,7 @@ struct ScriptCompression
             s.ignore(nSize);
         } else {
             script.resize(nSize);
-            s >> MakeSpan(script);
+            s >> Span{script};
         }
     }
 };

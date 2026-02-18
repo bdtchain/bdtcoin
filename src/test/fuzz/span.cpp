@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-void test_one_input(const std::vector<uint8_t>& buffer)
+FUZZ_TARGET(span)
 {
     FuzzedDataProvider fuzzed_data_provider(buffer.data(), buffer.size());
 
@@ -30,10 +30,4 @@ void test_one_input(const std::vector<uint8_t>& buffer)
         (void)span.subspan(idx, span.size() - idx);
         (void)span[idx];
     }
-
-    std::string another_str = fuzzed_data_provider.ConsumeBytesAsString(32);
-    const Span<const char> another_span{another_str};
-    assert((span <= another_span) != (span > another_span));
-    assert((span == another_span) != (span != another_span));
-    assert((span >= another_span) != (span < another_span));
 }

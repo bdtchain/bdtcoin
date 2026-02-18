@@ -1,19 +1,20 @@
-// Copyright (c) 2020 The Bdtcoin Core developers
+// Copyright (c) 2020-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <amount.h>
+#include <consensus/amount.h>
 #include <policy/fees.h>
-
-#include <test/util/setup_common.h>
 
 #include <boost/test/unit_test.hpp>
 
-BOOST_FIXTURE_TEST_SUITE(policy_fee_tests, BasicTestingSetup)
+#include <set>
+
+BOOST_AUTO_TEST_SUITE(policy_fee_tests)
 
 BOOST_AUTO_TEST_CASE(FeeRounder)
 {
-    FeeFilterRounder fee_rounder{CFeeRate{1000}};
+    FastRandomContext rng{/*fDeterministic=*/true};
+    FeeFilterRounder fee_rounder{CFeeRate{1000}, rng};
 
     // check that 1000 rounds to 974 or 1071
     std::set<CAmount> results;

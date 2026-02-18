@@ -1,10 +1,13 @@
-// Copyright (c) 2019Johir Uddin Sultan
-// Copyright (c) 2020-2021 The Bdtcoin Core developers
+// Copyright (c) 2018 JUS
+// Copyright (c) 2009-2018 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BDTCOIN_RPC_CLIENT_H
 #define BDTCOIN_RPC_CLIENT_H
+
+#include <string>
+#include <string_view>
 
 #include <univalue.h>
 
@@ -13,10 +16,5 @@ UniValue RPCConvertValues(const std::string& strMethod, const std::vector<std::s
 
 /** Convert named arguments to command-specific RPC representation */
 UniValue RPCConvertNamedValues(const std::string& strMethod, const std::vector<std::string>& strParams);
-
-/** Non-RFC4627 JSON parser, accepts internal values (such as numbers, true, false, null)
- * as well as objects and arrays.
- */
-UniValue ParseNonRFCJSONValue(const std::string& strVal);
 
 #endif // BDTCOIN_RPC_CLIENT_H

@@ -1,11 +1,13 @@
-// Copyright (c) 2020 The Bdtcoin Core developers
+// Copyright (c) 2020-2022 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <net_permissions.h>
+#include <netbase.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
+#include <test/fuzz/util/net.h>
 #include <util/translation.h>
 
 #include <cassert>
@@ -13,22 +15,11 @@
 #include <string>
 #include <vector>
 
-void test_one_input(const std::vector<uint8_t>& buffer)
+FUZZ_TARGET(net_permissions)
 {
     FuzzedDataProvider fuzzed_data_provider(buffer.data(), buffer.size());
-    const std::string s = fuzzed_data_provider.ConsumeRandomLengthString(32);
-    const NetPermissionFlags net_permission_flags = fuzzed_data_provider.ConsumeBool() ? fuzzed_data_provider.PickValueInArray<NetPermissionFlags>({
-                                                                                             NetPermissionFlags::PF_NONE,
-                                                                                             NetPermissionFlags::PF_BLOOMFILTER,
-                                                                                             NetPermissionFlags::PF_RELAY,
-                                                                                             NetPermissionFlags::PF_FORCERELAY,
-                                                                                             NetPermissionFlags::PF_NOBAN,
-                                                                                             NetPermissionFlags::PF_MEMPOOL,
-                                                                                             NetPermissionFlags::PF_ADDR,
-                                                                                             NetPermissionFlags::PF_ISIMPLICIT,
-                                                                                             NetPermissionFlags::PF_ALL,
-                                                                                         }) :
-                                                                                         static_cast<NetPermissionFlags>(fuzzed_data_provider.ConsumeIntegral<uint32_t>());
+    const std::string s = fuzzed_data_provider.ConsumeRandomLengthString(1000);
+    const NetPermissionFlags net_permission_flags = ConsumeWeakEnum(fuzzed_data_provider, ALL_NET_PERMISSION_FLAGS);
 
     NetWhitebindPermissions net_whitebind_permissions;
     bilingual_str error_net_whitebind_permissions;
@@ -36,17 +27,18 @@ void test_one_input(const std::vector<uint8_t>& buffer)
         (void)NetPermissions::ToStrings(net_whitebind_permissions.m_flags);
         (void)NetPermissions::AddFlag(net_whitebind_permissions.m_flags, net_permission_flags);
         assert(NetPermissions::HasFlag(net_whitebind_permissions.m_flags, net_permission_flags));
-        (void)NetPermissions::ClearFlag(net_whitebind_permissions.m_flags, net_permission_flags);
+        (void)NetPermissions::ClearFlag(net_whitebind_permissions.m_flags, NetPermissionFlags::Implicit);
         (void)NetPermissions::ToStrings(net_whitebind_permissions.m_flags);
     }
 
     NetWhitelistPermissions net_whitelist_permissions;
+    ConnectionDirection connection_direction;
     bilingual_str error_net_whitelist_permissions;
-    if (NetWhitelistPermissions::TryParse(s, net_whitelist_permissions, error_net_whitelist_permissions)) {
+    if (NetWhitelistPermissions::TryParse(s, net_whitelist_permissions, connection_direction, error_net_whitelist_permissions)) {
         (void)NetPermissions::ToStrings(net_whitelist_permissions.m_flags);
         (void)NetPermissions::AddFlag(net_whitelist_permissions.m_flags, net_permission_flags);
         assert(NetPermissions::HasFlag(net_whitelist_permissions.m_flags, net_permission_flags));
-        (void)NetPermissions::ClearFlag(net_whitelist_permissions.m_flags, net_permission_flags);
+        (void)NetPermissions::ClearFlag(net_whitelist_permissions.m_flags, NetPermissionFlags::Implicit);
         (void)NetPermissions::ToStrings(net_whitelist_permissions.m_flags);
     }
 }

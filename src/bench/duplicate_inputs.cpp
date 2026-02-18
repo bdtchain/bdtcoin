@@ -1,26 +1,34 @@
-// Copyright (c) 2011-2020 The Bdtcoin Core developers
+// Copyright (c) 2011-2022 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
+#include <chain.h>
 #include <chainparams.h>
+#include <consensus/consensus.h>
 #include <consensus/merkle.h>
 #include <consensus/validation.h>
 #include <pow.h>
+#include <primitives/block.h>
+#include <primitives/transaction.h>
+#include <random.h>
+#include <script/script.h>
+#include <sync.h>
 #include <test/util/setup_common.h>
-#include <txmempool.h>
+#include <uint256.h>
 #include <validation.h>
+
+#include <cassert>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 
 static void DuplicateInputs(benchmark::Bench& bench)
 {
-    TestingSetup test_setup{
-        CBaseChainParams::REGTEST,
-        /* extra_args */ {
-            "-nodebuglogfile",
-            "-nodebug",
-        },
-    };
+    const auto testing_setup = MakeNoLogFileContext<const TestingSetup>();
 
     const CScript SCRIPT_PUB{CScript(OP_TRUE)};
 
@@ -31,7 +39,7 @@ static void DuplicateInputs(benchmark::Bench& bench)
     CMutableTransaction naughtyTx{};
 
     LOCK(cs_main);
-    CBlockIndex* pindexPrev = ::ChainActive().Tip();
+    CBlockIndex* pindexPrev = testing_setup->m_node.chainman->ActiveChain().Tip();
     assert(pindexPrev != nullptr);
     block.nBits = GetNextWorkRequired(pindexPrev, &block, chainparams.GetConsensus());
     block.nNonce = 0;
@@ -52,7 +60,7 @@ static void DuplicateInputs(benchmark::Bench& bench)
 
     uint64_t n_inputs = (((MAX_BLOCK_SERIALIZED_SIZE / WITNESS_SCALE_FACTOR) - (CTransaction(coinbaseTx).GetTotalSize() + CTransaction(naughtyTx).GetTotalSize())) / 41) - 100;
     for (uint64_t x = 0; x < (n_inputs - 1); ++x) {
-        naughtyTx.vin.emplace_back(GetRandHash(), 0, CScript(), 0);
+        naughtyTx.vin.emplace_back(Txid::FromUint256(GetRandHash()), 0, CScript(), 0);
     }
     naughtyTx.vin.emplace_back(naughtyTx.vin.back());
 
@@ -68,4 +76,4 @@ static void DuplicateInputs(benchmark::Bench& bench)
     });
 }
 
-BENCHMARK(DuplicateInputs);
+BENCHMARK(DuplicateInputs, benchmark::PriorityLevel::HIGH);

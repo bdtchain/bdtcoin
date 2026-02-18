@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2015-2018 The Bdtcoin Core developers
+# Copyright (c) 2015-2020 The Bdtcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test invalid p2p messages for nodes with bloom filters disabled.
@@ -45,4 +45,4 @@ class P2PNoBloomFilterMessages(BdtcoinTestFramework):
 
 
 if __name__ == '__main__':
-    P2PNoBloomFilterMessages().main()
+    P2PNoBloomFilterMessages(__file__).main()

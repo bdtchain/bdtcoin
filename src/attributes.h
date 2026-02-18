@@ -1,22 +1,27 @@
-// Copyright (c) 2019-2020 Johir Uddin Sultan
-// Copyright (c) 2020-2021 The Bdtcoin Core developers
+// Copyright (c) 2018-2025 JUS
+// Copyright (c) 2009-2020 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BDTCOIN_ATTRIBUTES_H
 #define BDTCOIN_ATTRIBUTES_H
 
-#if defined(__has_cpp_attribute)
-#  if __has_cpp_attribute(nodiscard)
-#    define NODISCARD [[nodiscard]]
-#  endif
-#endif
-#ifndef NODISCARD
-#  if defined(_MSC_VER) && _MSC_VER >= 1700
-#    define NODISCARD _Check_return_
+#if defined(__clang__)
+#  if __has_attribute(lifetimebound)
+#    define LIFETIMEBOUND [[clang::lifetimebound]]
 #  else
-#    define NODISCARD __attribute__((warn_unused_result))
+#    define LIFETIMEBOUND
 #  endif
+#else
+#  define LIFETIMEBOUND
+#endif
+
+#if defined(__GNUC__)
+#  define ALWAYS_INLINE inline __attribute__((always_inline))
+#elif defined(_MSC_VER)
+#  define ALWAYS_INLINE __forceinline
+#else
+#  error No known always_inline attribute for this platform.
 #endif
 
 #endif // BDTCOIN_ATTRIBUTES_H

@@ -1,11 +1,8 @@
-0.21.1 Release Notes
-====================
+Bdtcoin Core version 29.0 is now available from:
 
-Bdtcoin Core version 0.21.1 is now available from:
+  <https://bdtcoin.org/bin/bdtcoin-core-29.0/>
 
-  <https://bdtcoincore.org/bin/bdtcoin-core-0.21.1/>
-
-This minor release includes various bug fixes and performance
+This release includes new features, various bug fixes and performance
 improvements, as well as updated translations.
 
 Please report bugs using the issue tracker at GitHub:
@@ -14,14 +11,14 @@ Please report bugs using the issue tracker at GitHub:
 
 To receive security and update notifications, please subscribe to:
 
-  <https://bdtcoincore.org/en/list/announcements/join/>
+  <https://bdtcoin.org/en/list/announcements/join/>
 
 How to Upgrade
 ==============
 
 If you are running an older version, shut it down. Wait until it has completely
 shut down (which might take a few minutes in some cases), then run the
-installer (on Windows) or just copy over `/Applications/Bdtcoin-Qt` (on Mac)
+installer (on Windows) or just copy over `/Applications/Bdtcoin-Qt` (on macOS)
 or `bdtcoind`/`bdtcoin-qt` (on Linux).
 
 Upgrading directly from a version of Bdtcoin Core that has reached its EOL is
@@ -31,173 +28,235 @@ wallet versions of Bdtcoin Core are generally supported.
 Compatibility
 ==============
 
-Bdtcoin Core is supported and extensively tested on operating systems
-using the Linux kernel, macOS 10.12+, and Windows 7 and newer.  Bdtcoin
+Bdtcoin Core is supported and tested on operating systems using the
+Linux Kernel 3.17+, macOS 13+, and Windows 10+. Bdtcoin
 Core should also work on most other Unix-like systems but is not as
-frequently tested on them.  It is not recommended to use Bdtcoin Core on
+frequently tested on them. It is not recommended to use Bdtcoin Core on
 unsupported systems.
-
-From Bdtcoin Core 0.20.0 onwards, macOS versions earlier than 10.12 are no
-longer supported. Additionally, Bdtcoin Core does not yet change appearance
-when macOS "dark mode" is activated.
 
 Notable changes
 ===============
 
-## Taproot Soft Fork
+### P2P and Network Changes
 
-Included in this release are the mainnet and testnet activation
-parameters for the taproot soft fork (BIP341) which also adds support
-for schnorr signatures (BIP340) and tapscript (BIP342).
+- Support for UPnP was dropped. If you want to open a port automatically, consider using the `-natpmp`
+option instead, which uses PCP or NAT-PMP depending on router support. (#31130)
 
-If activated, these improvements will allow users of single-signature
-scripts, multisignature scripts, and complex contracts to all use
-identical-appearing commitments that enhance their privacy and the
-fungibility of all bdtcoins. Spenders will enjoy lower fees and the
-ability to resolve many multisig scripts and complex contracts with the
-same efficiency, low fees, and large anonymity set as single-sig users.
-Taproot and schnorr also include efficiency improvements for full nodes
-such as the ability to batch signature verification.  Together, the
-improvements lay the groundwork for future potential
-upgrades that may improve efficiency, privacy, and fungibility further.
+- libnatpmp was replaced with a built-in implementation of PCP and NAT-PMP (still enabled using the `-natpmp` option). This supports automatic IPv4 port forwarding as well as IPv6 pinholing. (#30043)
 
-Activation for taproot is being managed using a variation of BIP9
-versionbits called Speedy Trial (described in BIP341). Taproot's
-versionbit is bit 2, and nodes will begin tracking which blocks signal
-support for taproot at the beginning of the first retarget period after
-taproot’s start date of 24 April 2021.  If 90% of blocks within a
-2,016-block retarget period (about two weeks) signal support for taproot
-prior to the first retarget period beginning after the time of 11 August
-2021, the soft fork will be locked in, and taproot will then be active
-as of block 709632 (expected in early or mid November).
+- When the `-port` configuration option is used, the default onion listening port will now
+be derived to be that port + 1 instead of being set to a fixed value (8334 on mainnet).
+This re-allows setups with multiple local nodes using different `-port` and not using `-bind`,
+which would lead to a startup failure in v28.0 due to a port collision.
+Note that a `HiddenServicePort` manually configured in `torrc` may need adjustment if used in
+connection with the `-port` option.
+For example, if you are using `-port=5555` with a non-standard value and not using `-bind=...=onion`,
+previously Bdtcoin Core would listen for incoming Tor connections on `127.0.0.1:8334`.
+Now it would listen on `127.0.0.1:5556` (`-port` plus one). If you configured the hidden service manually
+in torrc now you have to change it from `HiddenServicePort 8333 127.0.0.1:8334` to `HiddenServicePort 8333
+127.0.0.1:5556`, or configure bdtcoind with `-bind=127.0.0.1:8334=onion` to get the previous behavior.
+(#31223)
 
-Should taproot not be locked in via Speedy Trial activation, it is
-expected that a follow-up activation mechanism will be deployed, with
-changes to address the reasons the Speedy Trial method failed.
+- Upon receiving an orphan transaction (an unconfirmed transaction that spends unknown inputs), the node will attempt to download missing parents from all peers who announced the orphan. This change may increase bandwidth usage but make orphan-handling more reliable. (#31397)
 
-This release includes the ability to pay taproot addresses, although
-payments to such addresses are not secure until taproot activates.
-It also includes the ability to relay and mine taproot transactions
-after activation.  Beyond those two basic capabilities, this release
-does not include any code that allows anyone to directly use taproot.
-The addition of taproot-related features to Bdtcoin Core's wallet is
-expected in later releases once taproot activation is assured.
+### Mempool Policy and Mining Changes
 
-All users, businesses, and miners are encouraged to upgrade to this
-release (or a subsequent compatible release) unless they object to
-activation of taproot.  If taproot is locked in, then upgrading before
-block 709632 is highly recommended to help enforce taproot's new rules
-and to avoid the unlikely case of seeing falsely confirmed transactions.
+- Ephemeral dust is a new concept that allows a single
+dust output in a transaction, provided the transaction
+is zero fee. In order to spend any unconfirmed outputs
+from this transaction, the spender must also spend
+this dust in addition to any other desired outputs.
+In other words, this type of transaction
+should be created in a transaction package where
+the dust is both created and spent simultaneously. (#30239)
 
-Miners who want to activate Taproot should preferably use this release
-to control their signaling.  The `getblocktemplate` RPC results will
-automatically be updated to signal once the appropriate start has been
-reached and continue signaling until the timeout occurs or taproot
-activates.  Alternatively, miners may manually start signaling on bit 2
-at any time; if taproot activates, they will need to ensure they update
-their nodes before block 709632 or non-upgraded nodes could cause them to mine on
-an invalid chain.  See the [versionbits
-FAQ](https://bdtcoincore.org/en/2016/06/08/version-bits-miners-faq/) for
-details.
+- Due to a bug, the default block reserved weight (`4,000 WU`) for fixed-size block header, transactions count, and coinbase transaction was reserved twice and could not be lowered. As a result the total reserved weight was always `8,000 WU`, meaning that even when specifying a `-blockmaxweight` higher than the default (even to the max of `4,000,000 WU`), the actual block size will never exceed `3,992,000 WU`.
+The fix consolidates the reservation into a single place and introduces a new startup option, `-blockreservedweight` which specifies the reserved weight directly. The default value of `-blockreservedweight` is set to `8,000 WU` to ensure backward compatibility for users who relied on the previous behavior of `-blockmaxweight`.
+The minimum value of `-blockreservedweight` is set to `2,000 WU`. Users setting `-blockreservedweight` below the default should ensure that the total weight of their block header, transaction count, and coinbase transaction does not exceed the reduced value or they may risk mining an invalid block. (#31384)
+
+### Updated RPCs
+
+- The RPC `testmempoolaccept` response now includes a `reject-details` field in some cases,
+similar to the complete error messages returned by `sendrawtransaction` (#28121)
+
+- Duplicate blocks submitted with `submitblock` will now persist their block data
+even if it was previously pruned. If pruning is activated, the data will be
+pruned again eventually once the block file it is persisted in is selected for
+pruning. This is consistent with the behaviour of `getblockfrompeer` where the
+block is persisted as well even when pruning. (#31175)
+
+- `getmininginfo` now returns `nBits` and the current target in the `target` field. It also returns a `next` object which specifies the `height`, `nBits`, `difficulty`, and `target` for the next block. (#31583)
+
+- `getblock` and `getblockheader` now return the current target in the `target` field (#31583)
+
+- `getblockchaininfo` and `getchainstates` now return `nBits` and the current target in the `target` field (#31583)
+
+- the `getblocktemplate` RPC `curtime` (BIP22) and `mintime` (BIP23) fields now
+  account for the timewarp fix proposed in BIP94 on all networks. This ensures
+  that, in the event a timewarp fix softfork activates on mainnet, un-upgraded
+  miners will not accidentally violate the timewarp rule. (#31376, #31600)
+As a reminder, it's important that any software which uses the `getblocktemplate`
+RPC takes these values into account (either `curtime` or `mintime` is fine).
+Relying only on a clock can lead to invalid blocks under some circumstances,
+especially once a timewarp fix is deployed. (#31600)
+
+### New RPCs
+
+- `getdescriptoractivity` can be used to find all spend/receive activity relevant to
+  a given set of descriptors within a set of specified blocks. This call can be used with
+  `scanblocks` to lessen the need for additional indexing programs. (#30708)
 
 
-For more information about taproot, please see the following resources:
+### Updated REST APIs
 
-- Technical specifications
-  - [BIP340 Schnorr signatures for secp256k1](https://github.com/bdtcoin/bips/blob/master/bip-0340.mediawiki) 
-  - [BIP341 Taproot: SegWit version 1 spending rules](https://github.com/bdtcoin/bips/blob/master/bip-0341.mediawiki)
-  - [BIP342 Validation of Taproot scripts](https://github.com/bdtcoin/bips/blob/master/bip-0342.mediawiki)
+- `GET /rest/block/<BLOCK-HASH>.json` and `GET /rest/headers/<BLOCK-HASH>.json` now return the current target in the `target` field
 
-- Popular articles;
-  - [Taproot Is Coming: What It Is, and How It Will Benefit Bdtcoin](https://bdtcoinmagazine.com/technical/taproot-coming-what-it-and-how-it-will-benefit-bdtcoin)
-  - [What do Schnorr Signatures Mean for Bdtcoin?](https://academy.binance.com/en/articles/what-do-schnorr-signatures-mean-for-bdtcoin)
-  - [The Schnorr Signature & Taproot Softfork Proposal](https://blog.bitmex.com/the-schnorr-signature-taproot-softfork-proposal/)
+### Updated Settings
 
-- Development history overview
-  - [Taproot](https://bdtcoinops.org/en/topics/taproot/)
-  - [Schnorr signatures](https://bdtcoinops.org/en/topics/schnorr-signatures/)
-  - [Tapscript](https://bdtcoinops.org/en/topics/tapscript/)
-  - [Soft fork activation](https://bdtcoinops.org/en/topics/soft-fork-activation/)
+- The maximum allowed value for the `-dbcache` configuration option has been
+  dropped due to recent UTXO set growth. Note that before this change, large `-dbcache`
+  values were automatically reduced to 16 GiB (1 GiB on 32 bit systems). (#28358)
 
-- Other
-  - [Questions and answers related to taproot](https://bdtcoin.stackexchange.com/questions/tagged/taproot)
-  - [Taproot review](https://github.com/ajtowns/taproot-review)
+- Handling of negated `-noseednode`, `-nobind`, `-nowhitebind`, `-norpcbind`, `-norpcallowip`, `-norpcwhitelist`, `-notest`, `-noasmap`, `-norpcwallet`, `-noonlynet`, and `-noexternalip` options has changed. Previously negating these options had various confusing and undocumented side effects. Now negating them just resets the settings and restores default behaviors, as if the options were not specified.
 
-Updated RPCs
-------------
+- Starting with v28.0, the `-mempoolfullrbf` startup option was set to
+default to `1`. With widespread adoption of this policy, users no longer
+benefit from disabling it, so the option has been removed, making full
+replace-by-fee the standard behavior. (#30592)
 
-- Due to [BIP 350](https://github.com/bdtcoin/bips/blob/master/bip-0350.mediawiki)
-  being implemented, behavior for all RPCs that accept addresses is changed when
-  a native witness version 1 (or higher) is passed. These now require a Bech32m
-  encoding instead of a Bech32 one, and Bech32m encoding will be used for such
-  addresses in RPC output as well. No version 1 addresses should be created
-  for mainnet until consensus rules are adopted that give them meaning
-  (e.g. through [BIP 341](https://github.com/bdtcoin/bips/blob/master/bip-0341.mediawiki)).
-  Once that happens, Bech32m is expected to be used for them, so this shouldn't
-  affect any production systems, but may be observed on other networks where such
-  addresses already have meaning (like signet).
+- Setting `-upnp` will now log a warning and be interpreted as `-natpmp`. Consider using `-natpmp` directly instead. (#31130, #31916)
 
-0.21.1 change log
-=================
+- As a safety check, Bdtcoin core will **fail to start** when `-blockreservedweight` init parameter value is lower than `2000` weight units. Bdtcoin Core will also **fail to start** if the `-blockmaxweight` or `-blockreservedweight` init parameter exceeds consensus limit of `4,000,000 WU`.
 
-### Consensus
-- #21377 Speedy trial support for versionbits (ajtowns)
-- #21686 Speedy trial activation parameters for Taproot (achow101)
+- Passing `-debug=0` or `-debug=none` now behaves like `-nodebug`: previously set debug categories will be cleared, but subsequent `-debug` options will still be applied.
 
-### P2P protocol and network code
-- #20852 allow CSubNet of non-IP networks (vasild)
-- #21043 Avoid UBSan warning in ProcessMessage(…) (practicalswift)
+- The default for `-rpcthreads` has been changed from 4 to 16, and the default for `-rpcworkqueue` has been changed from 16 to 64. (#31215).
 
-### Wallet
-- #21166 Introduce DeferredSignatureChecker and have SignatureExtractorClass subclass it (achow101)
-- #21083 Avoid requesting fee rates multiple times during coin selection (achow101)
+### Build System
 
-### RPC and other APIs
-- #21201 Disallow sendtoaddress and sendmany when private keys disabled (achow101)
+The build system has been migrated from Autotools to CMake:
 
-### Build system
-- #21486 link against -lsocket if required for `*ifaddrs` (fanquake)
-- #20983 Fix MSVC build after gui#176 (hebasto)
+1. The minimum required CMake version is 3.22.
+2. In-source builds are not allowed. When using a subdirectory within the root source tree as a build directory, it is recommended that its name includes the substring "build".
+3. CMake variables may be used to configure the build system. See [Autotools to CMake Options Mapping](https://github.com/bdtcoin-core/bdtcoin-devwiki/wiki/Autotools-to-CMake-Options-Mapping) for details.
+4. For single-configuration generators, the default build configuration (`CMAKE_BUILD_TYPE`) is "RelWithDebInfo". However, for the "Release" configuration, CMake defaults to the compiler optimization flag `-O3`, which has not been extensively tested with Bdtcoin Core. Therefore, the build system replaces it with `-O2`.
+5. By default, the built executables and libraries are located in the `bin/` and `lib/` subdirectories of the build directory.
+6. The build system supports component‐based installation. The names of the installable components coincide with the build target names. For example:
+```
+cmake -B build
+cmake --build build --target bdtcoind
+cmake --install build --component bdtcoind
+```
 
-### Tests and QA
-- #21380 Add fuzzing harness for versionbits (ajtowns)
-- #20812 fuzz: Bump FuzzedDataProvider.h (MarcoFalke)
-- #20740 fuzz: Update FuzzedDataProvider.h from upstream (LLVM) (practicalswift)
-- #21446 Update vcpkg checkout commit (sipsorcery)
-- #21397 fuzz: Bump FuzzedDataProvider.h (MarcoFalke)
-- #21081 Fix the unreachable code at `feature_taproot` (brunoerg)
-- #20562 Test that a fully signed tx given to signrawtx is unchanged (achow101)
-- #21571 Make sure non-IP peers get discouraged and disconnected (vasild, MarcoFalke)
-- #21489 fuzz: cleanups for versionbits fuzzer (ajtowns)
+7. If any of the `CPPFLAGS`, `CFLAGS`, `CXXFLAGS` or `LDFLAGS` environment variables were used in your Autotools-based build process, you should instead use the corresponding CMake variables (`APPEND_CPPFLAGS`, `APPEND_CFLAGS`, `APPEND_CXXFLAGS` and `APPEND_LDFLAGS`). Alternatively, if you opt to use the dedicated `CMAKE_<...>_FLAGS` variables, you must ensure that the resulting compiler or linker invocations are as expected.
 
-### Miscellaneous
-- #20861 BIP 350: Implement Bech32m and use it for v1+ segwit addresses (sipa)
+For more detailed guidance on configuring and using CMake, please refer to the official [CMake documentation](https://cmake.org/cmake/help/latest/) and [CMake’s User Interaction Guide](https://cmake.org/cmake/help/latest/guide/user-interaction/index.html). Additionally, consult platform-specific `doc/build-*.md` build guides for instructions tailored to your operating system.
 
-### Documentation
-- #21384 add signet to bdtcoin.conf documentation (jonatack)
-- #21342 Remove outdated comment (hebasto)
+## Low-Level Changes
+
+### Tools and Utilities
+
+- A new tool [`utxo_to_sqlite.py`](/contrib/utxo-tools/utxo_to_sqlite.py)
+  converts a compact-serialized UTXO snapshot (as created with the
+  `dumptxoutset` RPC) to a SQLite3 database. Refer to the script's `--help`
+  output for more details. (#27432)
+
+### Tests
+
+- The BIP94 timewarp attack mitigation (designed for testnet4) is no longer active on the regtest network. (#31156)
+
+### Dependencies
+
+- MiniUPnPc and libnatpmp have been removed as dependencies (#31130, #30043).
 
 Credits
 =======
 
 Thanks to everyone who directly contributed to this release:
 
-- Aaron Clauson
-- Andrew Chow
+- 0xb10c
+- Adlai Chandrasekhar
+- Afanti
+- Alfonso Roman Zubeldia
+- am-sq
+- Andre
+- Andre Alves
 - Anthony Towns
-- Bruno Garcia
+- Antoine Poinsot
+- Ash Manning
+- Ava Chow
+- Boris Nagaev
+- Brandon Odiwuor
+- brunoerg
+- Chris Stewart
+- Cory Fields
+- costcould
+- Daniel Pfeifer
+- Daniela Brozzoni
+- David Gumberg
+- dergoegge
+- epysqyli
+- espi3
+- Eval EXEC
 - Fabian Jahr
 - fanquake
+- furszy
+- Gabriele Bocchi
+- glozow
+- Greg Sanders
+- Gutflo
 - Hennadii Stepanov
+- Hodlinator
+- i-am-yuvi
+- ion-
+- ismaelsadeeq
+- Jadi
+- James O'Beirne
+- Jeremy Rand
 - Jon Atack
-- Luke Dashjr
+- jurraca
+- Kay
+- kevkevinpal
+- l0rinc
+- laanwj
+- Larry Ruane
+- Lőrinc
+- Maciej S. Szmigiero
+- Mackain
 - MarcoFalke
+- marcofleon
+- Marnix
+- Martin Leitner-Ankerl
+- Martin Saposnic
+- Martin Zumsande
+- Matthew Zipkin
+- Max Edwards
+- Michael Dietz
+- naiyoma
+- Nicola Leonardo Susca
+- omahs
+- pablomartin4btc
 - Pieter Wuille
-- practicalswift
-- randymcmillan
+- Randall Naar
+- RiceChuan
+- rkrux
+- Roman Zeyde
+- Ryan Ofsky
+- Sebastian Falbesoner
+- secp512k2
+- Sergi Delgado Segura
+- Simon
 - Sjors Provoost
+- stickies-v
+- Suhas Daftuar
+- tdb3
+- TheCharlatan
+- tianzedavid
+- Torkel Rogstad
 - Vasil Dimov
-- W. J. van der Laan
+- wgyt
+- willcl-ark
+- yancy
 
 As well as to everyone that helped with translations on
 [Transifex](https://www.transifex.com/bdtcoin/bdtcoin/).

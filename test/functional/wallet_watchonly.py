@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-# Copyright (c) 2018-2019 The Bdtcoin Core developers
+# Copyright (c) 2018-2022 The Bdtcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test createwallet watchonly arguments.
 """
 
+from test_framework.blocktools import COINBASE_MATURITY
 from test_framework.test_framework import BdtcoinTestFramework
 from test_framework.util import (
     assert_equal,
@@ -13,8 +14,10 @@ from test_framework.util import (
 
 
 class CreateWalletWatchonlyTest(BdtcoinTestFramework):
+    def add_options(self, parser):
+        self.add_wallet_options(parser)
+
     def set_test_params(self):
-        self.setup_clean_chain = False
         self.num_nodes = 1
 
     def skip_test_if_missing_module(self):
@@ -36,12 +39,12 @@ class CreateWalletWatchonlyTest(BdtcoinTestFramework):
         wo_wallet.importpubkey(pubkey=def_wallet.getaddressinfo(wo_addr)['pubkey'])
         wo_wallet.importpubkey(pubkey=def_wallet.getaddressinfo(wo_change)['pubkey'])
 
-        # generate some btc for testing
-        node.generatetoaddress(101, a1)
+        # generate some bdtc for testing
+        self.generatetoaddress(node, COINBASE_MATURITY + 1, a1)
 
-        # send 1 btc to our watch-only address
+        # send 1 bdtc to our watch-only address
         txid = def_wallet.sendtoaddress(wo_addr, 1)
-        self.nodes[0].generate(1)
+        self.generate(self.nodes[0], 1)
 
         # getbalance
         self.log.info('include_watchonly should default to true for watch-only wallets')
@@ -95,17 +98,17 @@ class CreateWalletWatchonlyTest(BdtcoinTestFramework):
         options = {'changeAddress': wo_change}
         no_wo_options = {'changeAddress': wo_change, 'includeWatching': False}
 
-        result = wo_wallet.walletcreatefundedpsbt(inputs=inputs, outputs=outputs, options=options)
+        result = wo_wallet.walletcreatefundedpsbt(inputs=inputs, outputs=outputs, **options)
         assert_equal("psbt" in result, True)
         assert_raises_rpc_error(-4, "Insufficient funds", wo_wallet.walletcreatefundedpsbt, inputs, outputs, 0, no_wo_options)
 
         self.log.info('Testing fundrawtransaction watch-only defaults')
         rawtx = wo_wallet.createrawtransaction(inputs=inputs, outputs=outputs)
-        result = wo_wallet.fundrawtransaction(hexstring=rawtx, options=options)
+        result = wo_wallet.fundrawtransaction(hexstring=rawtx, **options)
         assert_equal("hex" in result, True)
         assert_raises_rpc_error(-4, "Insufficient funds", wo_wallet.fundrawtransaction, rawtx, no_wo_options)
 
 
 
 if __name__ == '__main__':
-    CreateWalletWatchonlyTest().main()
+    CreateWalletWatchonlyTest(__file__).main()

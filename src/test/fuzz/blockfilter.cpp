@@ -1,4 +1,4 @@
-// Copyright (c) 2020 The Bdtcoin Core developers
+// Copyright (c) 2020-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -6,14 +6,16 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
+#include <test/util/random.h>
 
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
 
-void test_one_input(const std::vector<uint8_t>& buffer)
+FUZZ_TARGET(blockfilter)
 {
+    SeedRandomStateForTest(SeedRand::ZEROS);
     FuzzedDataProvider fuzzed_data_provider(buffer.data(), buffer.size());
     const std::optional<BlockFilter> block_filter = ConsumeDeserializable<BlockFilter>(fuzzed_data_provider);
     if (!block_filter) {
@@ -36,9 +38,10 @@ void test_one_input(const std::vector<uint8_t>& buffer)
         (void)gcs_filter.GetEncoded();
         (void)gcs_filter.Match(ConsumeRandomLengthByteVector(fuzzed_data_provider));
         GCSFilter::ElementSet element_set;
-        while (fuzzed_data_provider.ConsumeBool()) {
+        LIMITED_WHILE(fuzzed_data_provider.ConsumeBool(), 30000)
+        {
             element_set.insert(ConsumeRandomLengthByteVector(fuzzed_data_provider));
-            gcs_filter.MatchAny(element_set);
         }
+        gcs_filter.MatchAny(element_set);
     }
 }

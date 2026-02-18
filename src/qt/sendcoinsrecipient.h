@@ -1,15 +1,11 @@
-// Copyright (c) 2011-2019 The Bdtcoin Core developers
+// Copyright (c) 2011-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BDTCOIN_QT_SENDCOINSRECIPIENT_H
 #define BDTCOIN_QT_SENDCOINSRECIPIENT_H
 
-#if defined(HAVE_CONFIG_H)
-#include <config/bdtcoin-config.h>
-#endif
-
-#include <amount.h>
+#include <consensus/amount.h>
 #include <serialize.h>
 
 #include <string>

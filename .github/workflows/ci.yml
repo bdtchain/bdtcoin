@@ -1,0 +1,72 @@
+name: Build (Linux, macOS, Windows)
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.event_name != 'pull_request' && github.run_id || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-build:
+    name: Linux (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang ccache build-essential cmake ninja-build pkgconf \
+            libevent-dev libboost-dev libsqlite3-dev libzmq3-dev \
+            qtbase5-dev qttools5-dev qttools5-dev-tools qtwayland5 libqrencode-dev
+      - name: Configure
+        run: |
+          CC=clang CXX=clang++ cmake -S . -B build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_DAEMON=ON -DBUILD_CLI=ON -DBUILD_GUI=ON \
+            -DWITH_ZMQ=ON -DENABLE_WALLET=ON
+      - name: Build
+        run: cmake --build build -j $(nproc)
+      # - name: Optional ctest
+      #   run: ctest --output-on-failure --stop-on-failure --test-dir build -j $(nproc) || true
+
+  macos-build:
+    name: macOS 14 (arm64)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Homebrew packages
+        env:
+          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
+        run: |
+          brew install --quiet coreutils ninja pkgconf gnu-getopt ccache boost libevent zeromq qt@5 qrencode sqlite
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5)" >> "$GITHUB_ENV"
+      - name: Configure
+        run: |
+          cmake -S . -B build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH }}" \
+            -DBUILD_DAEMON=ON -DBUILD_CLI=ON -DBUILD_GUI=ON \
+            -DWITH_ZMQ=ON -DENABLE_WALLET=ON
+      - name: Build
+        run: cmake --build build -j $(sysctl -n hw.ncpu)
+
+  windows-build:
+    name: Windows 2022 (VS 2022)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Generate build system (vcpkg + preset)
+        run: |
+          cmake -B build --preset vs2022-static -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" -DBUILD_GUI=ON -DWITH_ZMQ=ON -DENABLE_WALLET=ON
+      - name: Build
+        working-directory: build
+        run: cmake --build . -j $env:NUMBER_OF_PROCESSORS --config Release

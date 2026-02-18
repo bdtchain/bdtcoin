@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2018 The Bdtcoin Core developers
+// Copyright (c) 2011-2020 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -89,7 +89,7 @@ private:
     std::unique_ptr<interfaces::Handler> m_handler_show_progress;
     QStringList columns;
     TransactionTablePriv *priv;
-    bool fProcessingQueuedTransactions;
+    bool fProcessingQueuedTransactions{false};
     const PlatformStyle *platformStyle;
 
     void subscribeToCoreSignals();

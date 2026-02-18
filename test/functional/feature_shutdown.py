@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2018-2019 The Bdtcoin Core developers
+# Copyright (c) 2018-2020 The Bdtcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test bdtcoind shutdown."""
@@ -32,4 +32,4 @@ class ShutdownTest(BdtcoinTestFramework):
         self.stop_node(0, wait=1000)
 
 if __name__ == '__main__':
-    ShutdownTest().main()
+    ShutdownTest(__file__).main()

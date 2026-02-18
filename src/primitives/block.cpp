@@ -1,5 +1,5 @@
-// Copyright (c) 2019-2020 Johir Uddin Sultan
-// Copyright (c) 2021-2022 The Bdtcoin Core developers
+// Copyright (c) 2018-2025 JUS
+// Copyright (c) 2009-2019 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,7 +10,7 @@
 
 uint256 CBlockHeader::GetHash() const
 {
-    return SerializeHash(*this);
+    return (HashWriter{} << *this).GetHash();
 }
 
 std::string CBlock::ToString() const

@@ -24,4 +24,4 @@ class CreateCache(BdtcoinTestFramework):
         pass
 
 if __name__ == '__main__':
-    CreateCache().main()
+    CreateCache(__file__).main()

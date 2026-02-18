@@ -35,16 +35,18 @@ it will use a special cookie file for authentication. The cookie is generated wi
 content when the daemon starts, and deleted when it exits. Read access to this file
 controls who can access it through RPC.
 
-By default the cookie is stored in the data directory, but it's location can be overridden
-with the option '-rpccookiefile'.
+By default the cookie is stored in the data directory, but its location can be
+overridden with the option `-rpccookiefile`. Default file permissions for the
+cookie are "owner" (i.e. user read/writeable) via default application-wide file
+umask of `0077`, but these can be overridden with the `-rpccookieperms` option.
 
 This allows for running bdtcoind without having to do any manual configuration.
 
 `conf`, `pid`, and `wallet` accept relative paths which are interpreted as
 relative to the data directory. `wallet` *only* supports relative paths.
 
-For an example configuration file that describes the configuration settings,
-see `share/examples/bdtcoin.conf`.
+To generate an example configuration file that describes the configuration settings,
+see [contrib/devtools/README.md](../contrib/devtools/README.md#gen-bdtcoin-confsh).
 
 Paths
 ---------------------------------
@@ -53,11 +55,12 @@ Paths
 
 All three configurations assume several paths that might need to be adjusted.
 
-Binary:              `/usr/bin/bdtcoind`
-Configuration file:  `/etc/bdtcoin/bdtcoin.conf`
-Data directory:      `/var/lib/bdtcoind`
-PID file:            `/var/run/bdtcoind/bdtcoind.pid` (OpenRC and Upstart) or `/run/bdtcoind/bdtcoind.pid` (systemd)
-Lock file:           `/var/lock/subsys/bdtcoind` (CentOS)
+    Binary:              /usr/bin/bdtcoind
+    Configuration file:  /etc/bdtcoin/bdtcoin.conf
+    Data directory:      /var/lib/bdtcoind
+    PID file:            /var/run/bdtcoind/bdtcoind.pid (OpenRC and Upstart) or
+                         /run/bdtcoind/bdtcoind.pid (systemd)
+    Lock file:           /var/lock/subsys/bdtcoind (CentOS)
 
 The PID directory (if applicable) and data directory should both be owned by the
 bdtcoin user and group. It is advised for security reasons to make the
@@ -69,7 +72,7 @@ NOTE: When using the systemd .service file, the creation of the aforementioned
 directories and the setting of their permissions is automatically handled by
 systemd. Directories are given a permission of 710, giving the bdtcoin group
 access to files under it _if_ the files themselves give permission to the
-bdtcoin group to do so (e.g. when `-sysperms` is specified). This does not allow
+bdtcoin group to do so. This does not allow
 for the listing of files under the directory.
 
 NOTE: It is not currently possible to override `datadir` in
@@ -83,10 +86,10 @@ OpenRC).
 
 ### macOS
 
-Binary:              `/usr/local/bin/bdtcoind`
-Configuration file:  `~/Library/Application Support/Bdtcoin/bdtcoin.conf`
-Data directory:      `~/Library/Application Support/Bdtcoin`
-Lock file:           `~/Library/Application Support/Bdtcoin/.lock`
+    Binary:              /usr/local/bin/bdtcoind
+    Configuration file:  ~/Library/Application Support/Bdtcoin/bdtcoin.conf
+    Data directory:      ~/Library/Application Support/Bdtcoin
+    Lock file:           ~/Library/Application Support/Bdtcoin/.lock
 
 Installing Service Configuration
 -----------------------------------

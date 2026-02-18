@@ -1,4 +1,4 @@
-// Copyright (c) 2020 The Bdtcoin Core developers
+// Copyright (c) 2020-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -204,7 +204,7 @@ public:
         }
 
         // Call TxRequestTracker's implementation.
-        m_tracker.ReceivedInv(peer, GenTxid{is_wtxid, TXHASHES[txhash]}, preferred, reqtime);
+        m_tracker.ReceivedInv(peer, is_wtxid ? GenTxid::Wtxid(TXHASHES[txhash]) : GenTxid::Txid(TXHASHES[txhash]), preferred, reqtime);
     }
 
     void RequestedTx(int peer, int txhash, std::chrono::microseconds exptime)
@@ -252,7 +252,7 @@ public:
             for (int peer2 = 0; peer2 < MAX_PEERS; ++peer2) {
                 Announcement& ann2 = m_announcements[txhash][peer2];
                 if (ann2.m_state == State::REQUESTED && ann2.m_time <= m_now) {
-                    expected_expired.emplace_back(peer2, GenTxid{ann2.m_is_wtxid, TXHASHES[txhash]});
+                    expected_expired.emplace_back(peer2, ann2.m_is_wtxid ? GenTxid::Wtxid(TXHASHES[txhash]) : GenTxid::Txid(TXHASHES[txhash]));
                     ann2.m_state = State::COMPLETED;
                     break;
                 }
@@ -295,6 +295,19 @@ public:
                 tracked += m_announcements[txhash][peer].m_state != State::NOTHING;
                 inflight += m_announcements[txhash][peer].m_state == State::REQUESTED;
                 candidates += m_announcements[txhash][peer].m_state == State::CANDIDATE;
+
+                std::bitset<MAX_PEERS> expected_announcers;
+                for (int peer = 0; peer < MAX_PEERS; ++peer) {
+                    if (m_announcements[txhash][peer].m_state == State::CANDIDATE || m_announcements[txhash][peer].m_state == State::REQUESTED) {
+                        expected_announcers[peer] = true;
+                    }
+                }
+                std::vector<NodeId> candidate_peers;
+                m_tracker.GetCandidatePeers(TXHASHES[txhash], candidate_peers);
+                assert(expected_announcers.count() == candidate_peers.size());
+                for (const auto& peer : candidate_peers) {
+                    assert(expected_announcers[peer]);
+                }
             }
             assert(m_tracker.Count(peer) == tracked);
             assert(m_tracker.CountInFlight(peer) == inflight);
@@ -310,7 +323,7 @@ public:
 };
 } // namespace
 
-void test_one_input(const std::vector<uint8_t>& buffer)
+FUZZ_TARGET(txrequest)
 {
     // Tester object (which encapsulates a TxRequestTracker).
     Tester tester;

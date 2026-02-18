@@ -2,12 +2,33 @@ Contents
 ========
 This directory contains tools for developers working on this repository.
 
+deterministic-fuzz-coverage
+===========================
+
+A tool to check for non-determinism in fuzz coverage. To get the help, run:
+
+```
+RUST_BACKTRACE=1 cargo run --manifest-path ./contrib/devtools/deterministic-fuzz-coverage/Cargo.toml -- --help
+```
+
+To execute the tool, compilation has to be done with the build options
+`-DCMAKE_C_COMPILER='clang' -DCMAKE_CXX_COMPILER='clang++'
+-DBUILD_FOR_FUZZING=ON -DCMAKE_CXX_FLAGS='-fPIC -fprofile-instr-generate
+-fcoverage-mapping'`. Both llvm-profdata and llvm-cov must be installed. Also,
+the qa-assets repository must have been cloned. Finally, a fuzz target has to
+be picked before running the tool:
+
+```
+RUST_BACKTRACE=1 cargo run --manifest-path ./contrib/devtools/deterministic-fuzz-coverage/Cargo.toml -- $PWD/build_dir $PWD/qa-assets/corpora-dir fuzz_target_name
+```
+
 clang-format-diff.py
 ===================
 
 A script to format unified git diffs according to [.clang-format](../../src/.clang-format).
 
-Requires `clang-format`, installed e.g. via `brew install clang-format` on macOS.
+Requires `clang-format`, installed e.g. via `brew install clang-format` on macOS,
+or `sudo apt install clang-format` on Debian/Ubuntu.
 
 For instance, to format the last commit with 0 lines of context,
 the script should be called from the git root folder as follows.
@@ -75,29 +96,54 @@ year rather than two hyphenated years.
 If the file already has a copyright for `The Bdtcoin Core developers`, the
 script will exit.
 
-gen-manpages.sh
+gen-manpages.py
 ===============
 
 A small script to automatically create manpages in ../../doc/man by running the release binaries with the -help option.
 This requires help2man which can be found at: https://www.gnu.org/software/help2man/
 
-With in-tree builds this tool can be run from any directory within the
-repostitory. To use this tool with out-of-tree builds set `BUILDDIR`. For
-example:
+This script assumes a build directory named `build` as suggested by example build documentation.
+To use it with a different build directory, set `BUILDDIR`.
+For example:
 
 ```bash
-BUILDDIR=$PWD/build contrib/devtools/gen-manpages.sh
+BUILDDIR=$PWD/my-build-dir contrib/devtools/gen-manpages.py
 ```
 
-security-check.py and test-security-check.py
-============================================
+headerssync-params.py
+=====================
+
+A script to generate optimal parameters for the headerssync module (src/headerssync.cpp). It takes no command-line
+options, as all its configuration is set at the top of the file. It runs many times faster inside PyPy. Invocation:
+
+```bash
+pypy3 contrib/devtools/headerssync-params.py
+```
+
+gen-bdtcoin-conf.sh
+===================
+
+Generates a bdtcoin.conf file in `share/examples/` by parsing the output from `bdtcoind --help`. This script is run during the
+release process to include a bdtcoin.conf with the release binaries and can also be run by users to generate a file locally.
+When generating a file as part of the release process, make sure to commit the changes after running the script.
+
+This script assumes a build directory named `build` as suggested by example build documentation.
+To use it with a different build directory, set `BUILDDIR`.
+For example:
+
+```bash
+BUILDDIR=$PWD/my-build-dir contrib/devtools/gen-bdtcoin-conf.sh
+```
+
+security-check.py
+=================
 
 Perform basic security checks on a series of executables.
 
 symbol-check.py
 ===============
 
-A script to check that the executables produced by gitian only contain
+A script to check that release executables only contain
 certain symbols and are only linked against allowed libraries.
 
 For Linux this means checking for allowed gcc, glibc and libstdc++ version symbols.
@@ -105,9 +151,9 @@ This makes sure they are still compatible with the minimum supported distributio
 
 For macOS and Windows we check that the executables are only linked against libraries we allow.
 
-Example usage after a gitian build:
+Example usage:
 
-    find ../gitian-builder/build -type f -executable | xargs python3 contrib/devtools/symbol-check.py
+    find ../path/to/executables -type f -executable | xargs python3 contrib/devtools/symbol-check.py
 
 If no errors occur the return value will be 0 and the output will be empty.
 

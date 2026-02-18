@@ -60,16 +60,17 @@ start_pre() {
 	"${BDTCOIND_PIDDIR}"
 
 	checkpath -f \
-	-o ${BDTCOIND_USER}:${BDTCOIND_GROUP} \
+	-o "${BDTCOIND_USER}:${BDTCOIND_GROUP}" \
 	-m 0660 \
-	${BDTCOIND_CONFIGFILE}
+	"${BDTCOIND_CONFIGFILE}"
 
 	checkconfig || return 1
 }
 
 checkconfig()
 {
-	if ! grep -qs '^rpcpassword=' "${BDTCOIND_CONFIGFILE}" ; then
+	if grep -qs '^rpcuser=' "${BDTCOIND_CONFIGFILE}" && \
+		! grep -qs '^rpcpassword=' "${BDTCOIND_CONFIGFILE}" ; then
 		eerror ""
 		eerror "ERROR: You must set a secure rpcpassword to run bdtcoind."
 		eerror "The setting must appear in ${BDTCOIND_CONFIGFILE}"

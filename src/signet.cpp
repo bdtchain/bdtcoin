@@ -1,31 +1,32 @@
-// Copyright (c) 2019-2020 The Bdtcoin Core developers
+// Copyright (c) 2019-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <signet.h>
 
-#include <array>
-#include <cstdint>
-#include <vector>
-
+#include <common/system.h>
 #include <consensus/merkle.h>
 #include <consensus/params.h>
 #include <consensus/validation.h>
 #include <core_io.h>
 #include <hash.h>
+#include <logging.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
-#include <span.h>
 #include <script/interpreter.h>
-#include <script/standard.h>
+#include <span.h>
 #include <streams.h>
-#include <util/strencodings.h>
-#include <util/system.h>
 #include <uint256.h>
+#include <util/strencodings.h>
+
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <vector>
 
 static constexpr uint8_t SIGNET_HEADER[4] = {0xec, 0xc7, 0xda, 0xa2};
 
-static constexpr unsigned int BLOCK_SCRIPT_VERIFY_FLAGS = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_WITNESS | SCRIPT_VERIFY_DERSIG | SCRIPT_VERIFY_NULLDUMMY;
+static constexpr unsigned int BLOCK_SCRIPT_VERIFY_FLAGS = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_WITNESS | SCRIPT_VERIFY_TAPROOT | SCRIPT_VERIFY_DERSIG | SCRIPT_VERIFY_NULLDUMMY;
 
 static bool FetchAndClearCommitmentSection(const Span<const uint8_t> header, CScript& witness_commitment, std::vector<uint8_t>& result)
 {
@@ -38,7 +39,7 @@ static bool FetchAndClearCommitmentSection(const Span<const uint8_t> header, CSc
     std::vector<uint8_t> pushdata;
     while (witness_commitment.GetOp(pc, opcode, pushdata)) {
         if (pushdata.size() > 0) {
-            if (!found_header && pushdata.size() > (size_t) header.size() && Span<const uint8_t>(pushdata.data(), header.size()) == header) {
+            if (!found_header && pushdata.size() > header.size() && std::ranges::equal(Span{pushdata}.first(header.size()), header)) {
                 // pushdata only counts if it has the header _and_ some data
                 result.insert(result.end(), pushdata.begin() + header.size(), pushdata.end());
                 pushdata.erase(pushdata.begin() + header.size(), pushdata.end());
@@ -65,16 +66,16 @@ static uint256 ComputeModifiedMerkleRoot(const CMutableTransaction& cb, const CB
     return ComputeMerkleRoot(std::move(leaves));
 }
 
-Optional<SignetTxs> SignetTxs::Create(const CBlock& block, const CScript& challenge)
+std::optional<SignetTxs> SignetTxs::Create(const CBlock& block, const CScript& challenge)
 {
     CMutableTransaction tx_to_spend;
-    tx_to_spend.nVersion = 0;
+    tx_to_spend.version = 0;
     tx_to_spend.nLockTime = 0;
     tx_to_spend.vin.emplace_back(COutPoint(), CScript(OP_0), 0);
     tx_to_spend.vout.emplace_back(0, challenge);
 
     CMutableTransaction tx_spending;
-    tx_spending.nVersion = 0;
+    tx_spending.version = 0;
     tx_spending.nLockTime = 0;
     tx_spending.vin.emplace_back(COutPoint(), CScript(), 0);
     tx_spending.vout.emplace_back(0, CScript(OP_RETURN));
@@ -83,12 +84,12 @@ Optional<SignetTxs> SignetTxs::Create(const CBlock& block, const CScript& challe
     // responses from block coinbase tx
 
     // find and delete signet signature
-    if (block.vtx.empty()) return nullopt; // no coinbase tx in block; invalid
+    if (block.vtx.empty()) return std::nullopt; // no coinbase tx in block; invalid
     CMutableTransaction modified_cb(*block.vtx.at(0));
 
     const int cidx = GetWitnessCommitmentIndex(block);
     if (cidx == NO_WITNESS_COMMITMENT) {
-        return nullopt; // require a witness commitment
+        return std::nullopt; // require a witness commitment
     }
 
     CScript& witness_commitment = modified_cb.vout.at(cidx).scriptPubKey;
@@ -98,18 +99,18 @@ Optional<SignetTxs> SignetTxs::Create(const CBlock& block, const CScript& challe
         // no signet solution -- allow this to support OP_TRUE as trivial block challenge
     } else {
         try {
-            VectorReader v(SER_NETWORK, INIT_PROTO_VERSION, signet_solution, 0);
+            SpanReader v{signet_solution};
             v >> tx_spending.vin[0].scriptSig;
             v >> tx_spending.vin[0].scriptWitness.stack;
-            if (!v.empty()) return nullopt; // extraneous data encountered
+            if (!v.empty()) return std::nullopt; // extraneous data encountered
         } catch (const std::exception&) {
-            return nullopt; // parsing error
+            return std::nullopt; // parsing error
         }
     }
     uint256 signet_merkle = ComputeModifiedMerkleRoot(modified_cb, block);
 
     std::vector<uint8_t> block_data;
-    CVectorWriter writer(SER_NETWORK, INIT_PROTO_VERSION, block_data, 0);
+    VectorWriter writer{block_data, 0};
     writer << block.nVersion;
     writer << block.hashPrevBlock;
     writer << signet_merkle;
@@ -123,26 +124,30 @@ Optional<SignetTxs> SignetTxs::Create(const CBlock& block, const CScript& challe
 // Signet block solution checker
 bool CheckSignetBlockSolution(const CBlock& block, const Consensus::Params& consensusParams)
 {
+
     if (block.GetHash() == consensusParams.hashGenesisBlock) {
         // genesis block solution is always valid
         return true;
     }
 
     const CScript challenge(consensusParams.signet_challenge.begin(), consensusParams.signet_challenge.end());
-    const Optional<SignetTxs> signet_txs = SignetTxs::Create(block, challenge);
+    const std::optional<SignetTxs> signet_txs = SignetTxs::Create(block, challenge);
 
     if (!signet_txs) {
-        LogPrint(BCLog::VALIDATION, "CheckSignetBlockSolution: Errors in block (block solution parse failure)\n");
+        LogDebug(BCLog::VALIDATION, "CheckSignetBlockSolution: Errors in block (block solution parse failure)\n");
         return false;
     }
 
     const CScript& scriptSig = signet_txs->m_to_sign.vin[0].scriptSig;
     const CScriptWitness& witness = signet_txs->m_to_sign.vin[0].scriptWitness;
 
-    TransactionSignatureChecker sigcheck(&signet_txs->m_to_sign, /*nIn=*/ 0, /*amount=*/ signet_txs->m_to_spend.vout[0].nValue);
+    PrecomputedTransactionData txdata;
+    txdata.Init(signet_txs->m_to_sign, {signet_txs->m_to_spend.vout[0]});
+    TransactionSignatureChecker sigcheck(&signet_txs->m_to_sign, /* nInIn= */ 0, /* amountIn= */ signet_txs->m_to_spend.vout[0].nValue, txdata, MissingDataBehavior::ASSERT_FAIL);
 
-    if (!VerifyScript(scriptSig, signet_txs->m_to_spend.vout[0].scriptPubKey, &witness, BLOCK_SCRIPT_VERIFY_FLAGS, sigcheck)) {
-        LogPrint(BCLog::VALIDATION, "CheckSignetBlockSolution: Errors in block (block solution invalid)\n");
+    ScriptError serror = SCRIPT_ERR_OK;
+    if (!VerifyScript(scriptSig, signet_txs->m_to_spend.vout[0].scriptPubKey, &witness, BLOCK_SCRIPT_VERIFY_FLAGS, sigcheck, &serror)) {
+        LogDebug(BCLog::VALIDATION, "CheckSignetBlockSolution: Errors in block (block solution invalid), serror=%s\n", ScriptErrorString(serror));
         return false;
     }
     return true;

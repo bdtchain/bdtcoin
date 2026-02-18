@@ -310,7 +310,7 @@ Network
   (#14897, #15834)
 
 - If a Tor hidden service is being used, Bdtcoin Core will be bound to
-  the standard port 7393 even if a different port is configured for
+  the standard port 8333 even if a different port is configured for
   clearnet connections.  This prevents leaking node identity through use
   of identical non-default port numbers. (#15651)
 
@@ -355,7 +355,7 @@ Wallet
   BDTC), the RPC commands `walletcreatefundedpsbt` and
   `fundrawtransaction` will now fail instead of rounding down the fee.
   Be aware that the `feeRate` argument is specified in BDTC per 1,000
-  vbytes, not jus per vbyte. (#16257)
+  vbytes, not satoshi per vbyte. (#16257)
 
 - A new wallet flag `avoid_reuse` has been added (default off). When
   enabled, a wallet will distinguish between used and unused addresses,

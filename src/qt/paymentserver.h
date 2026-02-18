@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2019 The Bdtcoin Core developers
+// Copyright (c) 2011-2020 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -32,10 +32,6 @@
 // sends them to the server.
 //
 
-#if defined(HAVE_CONFIG_H)
-#include <config/bdtcoin-config.h>
-#endif
-
 #include <qt/sendcoinsrecipient.h>
 
 #include <QObject>
@@ -53,6 +49,8 @@ class QByteArray;
 class QLocalServer;
 class QUrl;
 QT_END_NAMESPACE
+
+extern const QString BDTCOIN_IPC_PREFIX;
 
 class PaymentServer : public QObject
 {
@@ -101,9 +99,9 @@ protected:
     bool eventFilter(QObject *object, QEvent *event) override;
 
 private:
-    bool saveURIs;                      // true during startup
-    QLocalServer* uriServer;
-    OptionsModel *optionsModel;
+    bool saveURIs{true}; // true during startup
+    QLocalServer* uriServer{nullptr};
+    OptionsModel* optionsModel{nullptr};
 };
 
 #endif // BDTCOIN_QT_PAYMENTSERVER_H

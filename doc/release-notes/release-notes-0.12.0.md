@@ -122,7 +122,7 @@ its maximum size, the transaction that (along with in-mempool descendants) has
 the lowest total feerate (as a package) will be evicted and the node's effective
 minimum relay feerate will be increased to match this feerate plus the initial
 minimum relay feerate. The initial minimum relay feerate is set to
-1000 juss per kB.
+1000 satoshis per kB.
 
 Bdtcoin Core 0.12 also introduces new default policy limits on the length and
 size of unconfirmed transaction chains that are allowed in the mempool
@@ -280,7 +280,7 @@ At all times, Bdtcoin Core will cap fees at `-maxtxfee=<x>` (default:
 Furthermore, Bdtcoin Core will never create transactions paying less than
 the current minimum relay fee.
 Finally, a user can set the minimum fee rate for all transactions with
-`-mintxfee=<i>`, which defaults to 1000 juss per kB.
+`-mintxfee=<i>`, which defaults to 1000 satoshis per kB.
 
 Wallet: Negative confirmations and conflict detection
 -----------------------------------------------------
@@ -410,9 +410,9 @@ arbitrary TCP connections inside SSL. On e.g. Ubuntu it can be installed with:
 
     sudo apt-get install stunnel4
 
-Then, to tunnel a SSL connection on 27397 to a RPC server bound on localhost on port 17397 do:
+Then, to tunnel a SSL connection on 28332 to a RPC server bound on localhost on port 18332 do:
 
-    stunnel -d 27397 -r 127.0.0.1:17397 -p stunnel.pem -P ''
+    stunnel -d 28332 -r 127.0.0.1:18332 -p stunnel.pem -P ''
 
 It can also be set up system-wide in inetd style.
 
@@ -430,8 +430,8 @@ caching. A sample config for apache2 could look like:
     SSLCertificateKeyFile /etc/apache2/ssl/server.key
 
     <Location /bdtcoinrpc>
-        ProxyPass http://127.0.0.1:7397/
-        ProxyPassReverse http://127.0.0.1:7397/
+        ProxyPass http://127.0.0.1:8332/
+        ProxyPassReverse http://127.0.0.1:8332/
         # optional enable digest auth
         # AuthType Digest
         # ...

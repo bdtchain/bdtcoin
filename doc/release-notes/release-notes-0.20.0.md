@@ -274,7 +274,7 @@ Command line
 ------------
 
 - Command line options prefixed with main/test/regtest network names like
-  `-main.port=7393` `-test.server=1` previously were allowed but ignored. Now
+  `-main.port=8333` `-test.server=1` previously were allowed but ignored. Now
   they trigger "Invalid parameter" errors on startup. (#17482)
 
 New RPCs
@@ -433,7 +433,7 @@ Build system
 - #18346 Document an RPCResult for all calls; Enforce at compile time (MarcoFalke)
 - #18396 Add missing HelpExampleRpc for getblockfilter (theStack)
 - #18398 Fix broken RPCExamples for waitforblock(height) (theStack)
-- #17993 Remove final comma for last entry of fixed-size arrays/objects in RPCResult (luke-jr)
+- #18444 Remove final comma for last entry of fixed-size arrays/objects in RPCResult (luke-jr)
 - #18459 Remove unused getbalances() code (jonatack)
 - #18484 Correctly compute redeemScript from witnessScript for signrawtransaction (achow101)
 - #18487 Fix rpcRunLater race in walletpassphrase (promag)
@@ -596,7 +596,7 @@ Build system
 - #16973 Fix `combine_logs.py` for AppVeyor build (mzumsande)
 - #16975 Show debug log on unit test failure (MarcoFalke)
 - #16978 Seed test RNG context for each test case, print seed (MarcoFalke)
-- #17009, #17018, #17050, #17051, #17071, #17076, #17083, #17093, #17109, #17113, #17136, #17229, #17291, #17357, #17771, #17777, #17917, #17926, #17972, #17989, #17996, #18009, #18029, #18047, #18126, #18176, #18206, #18353, #18363, #18407, #18417, #18423, #17995, #18455, #18565 Add fuzzing harnesses (practicalswift)
+- #17009, #17018, #17050, #17051, #17071, #17076, #17083, #17093, #17109, #17113, #17136, #17229, #17291, #17357, #17771, #17777, #17917, #17926, #17972, #17989, #17996, #18009, #18029, #18047, #18126, #18176, #18206, #18353, #18363, #18407, #18417, #18423, #18445, #18455, #18565 Add fuzzing harnesses (practicalswift)
 - #17011 ci: Use busybox utils for one build (MarcoFalke)
 - #17030 Fix Python Docstring to include all Args (jbampton)
 - #17041 ci: Run tests on arm (MarcoFalke)
@@ -711,7 +711,7 @@ Build system
 - #18311 Bumpfee test fix (instagibbs)
 - #18314 Add deserialization fuzzing of SnapshotMetadata (`utxo_snapshot`) (practicalswift)
 - #18319 fuzz: Add missing `ECC_Start` to `key_io` test (MarcoFalke)
-- #17399 Add basic test for BIP 37 (MarcoFalke)
+- #18334 Add basic test for BIP 37 (MarcoFalke)
 - #18350 Fix mining to an invalid target + ensure that a new block has the correct hash internally (TheQuantumPhysicist)
 - #18378 Bugfix & simplify bn2vch using `int.to_bytes` (sipa)
 - #18393 Don't assume presence of `__builtin_mul_overflow(…)` in `MultiplicationOverflow(…)` fuzzing harness (practicalswift)

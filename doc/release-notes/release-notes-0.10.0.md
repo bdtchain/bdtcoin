@@ -142,10 +142,10 @@ unauthenticated access to public node data.
 It is served on the same port as RPC, but does not need a password, and uses
 plain HTTP instead of JSON-RPC.
 
-Assuming a local RPC server running on port 7397, it is possible to request:
-- Blocks: http://localhost:7397/rest/block/*HASH*.*EXT*
-- Blocks without transactions: http://localhost:7397/rest/block/notxdetails/*HASH*.*EXT*
-- Transactions (requires `-txindex`): http://localhost:7397/rest/tx/*HASH*.*EXT*
+Assuming a local RPC server running on port 8332, it is possible to request:
+- Blocks: http://localhost:8332/rest/block/*HASH*.*EXT*
+- Blocks without transactions: http://localhost:8332/rest/block/notxdetails/*HASH*.*EXT*
+- Transactions (requires `-txindex`): http://localhost:8332/rest/tx/*HASH*.*EXT*
 
 In every case, *EXT* can be `bin` (for raw binary data), `hex` (for hex-encoded
 binary) or `json`.
@@ -510,11 +510,11 @@ Wallet:
 - `d5087d1` Use script matching rather than destination matching for watch-only
 - `d88af56` Fee fixes
 - `a35b55b` Dont run full check every time we decrypt wallet
-- `3a7c348` Fix make_change to not create half-juss
+- `3a7c348` Fix make_change to not create half-satoshis
 - `f606bb9` fix a possible memory leak in CWalletDB::Recover
 - `870da77` fix possible memory leaks in CWallet::EncryptWallet
 - `ccca27a` Watch-only fixes
-- `9b1627d` [Wallet] Reduce minTxFee for transaction creation to 1000 juss
+- `9b1627d` [Wallet] Reduce minTxFee for transaction creation to 1000 satoshis
 - `a53fd41` Deterministic signing
 - `15ad0b5` Apply AreSane() checks to the fees from the network
 - `11855c1` Enforce minRelayTxFee on wallet created tx and add a maxtxfee option

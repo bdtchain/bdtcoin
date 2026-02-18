@@ -5,65 +5,102 @@ Release Process
 
 ### Before every release candidate
 
-* Update translations (ping wumpus on IRC) see [translation_process.md](https://github.com/bdtchain/bdtcoin/blob/master/doc/translation_process.md#synchronising-translations).
-* Update manpages, see [gen-manpages.sh](https://github.com/bdtchain/bdtcoin/blob/master/contrib/devtools/README.md#gen-manpagessh).
-* Update release candidate version in `configure.ac` (`CLIENT_VERSION_RC`).
+* Update release candidate version in `CMakeLists.txt` (`CLIENT_VERSION_RC`).
+* Update manpages (after rebuilding the binaries), see [gen-manpages.py](/contrib/devtools/README.md#gen-manpagespy).
+* Update bdtcoin.conf and commit changes if they exist, see [gen-bdtcoin-conf.sh](/contrib/devtools/README.md#gen-bdtcoin-confsh).
 
 ### Before every major and minor release
 
-* Update [bips.md](bips.md) to account for changes since the last release (don't forget to bump the version number on the first line).
-* Update version in `configure.ac` (don't forget to set `CLIENT_VERSION_RC` to `0`).
-* Write release notes (see "Write the release notes" below).
+* Update [bips.md](bips.md) to account for changes since the last release.
+* Update version in `CMakeLists.txt` (don't forget to set `CLIENT_VERSION_RC` to `0`).
+* Update manpages (see previous section)
+* Write release notes (see "Write the release notes" below) in doc/release-notes.md. If necessary,
+  archive the previous release notes as doc/release-notes/release-notes-${VERSION}.md.
 
 ### Before every major release
 
 * On both the master branch and the new release branch:
-  - update `CLIENT_VERSION_MINOR` in [`configure.ac`](../configure.ac)
-  - update `CLIENT_VERSION_MINOR`, `PACKAGE_VERSION`, and `PACKAGE_STRING` in [`build_msvc/bdtcoin_config.h`](/build_msvc/bdtcoin_config.h)
-* On the new release branch in [`configure.ac`](../configure.ac) and [`build_msvc/bdtcoin_config.h`](/build_msvc/bdtcoin_config.h) (see [this commit](https://github.com/bdtchain/bdtcoin/commit/742f7dd)):
-  - set `CLIENT_VERSION_REVISION` to `0`
+  - update `CLIENT_VERSION_MAJOR` in [`CMakeLists.txt`](../CMakeLists.txt)
+* On the new release branch in [`CMakeLists.txt`](../CMakeLists.txt)(see [this commit](https://github.com/bdtchain/bdtcoin/commit/742f7dd)):
+  - set `CLIENT_VERSION_MINOR` to `0`
+  - set `CLIENT_VERSION_BUILD` to `0`
   - set `CLIENT_VERSION_IS_RELEASE` to `true`
 
 #### Before branch-off
 
-* Update hardcoded [seeds](/contrib/seeds/README.md), see [this pull request](https://github.com/bdtchain/bdtcoin/pull/7415) for an example.
-* Update [`src/chainparams.cpp`](/src/chainparams.cpp) m_assumed_blockchain_size and m_assumed_chain_state_size with the current size plus some overhead (see [this](#how-to-calculate-assumed-blockchain-and-chain-state-size) for information on how to calculate them).
-* Update [`src/chainparams.cpp`](/src/chainparams.cpp) chainTxData with statistics about the transaction count and rate. Use the output of the `getchaintxstats` RPC, see
-  [this pull request](https://github.com/bdtchain/bdtcoin/pull/20263) for an example. Reviewers can verify the results by running `getchaintxstats <window_block_count> <window_final_block_hash>` with the `window_block_count` and `window_final_block_hash` from your output.
-* Update `src/chainparams.cpp` nMinimumChainWork and defaultAssumeValid (and the block height comment) with information from the `getblockheader` (and `getblockhash`) RPCs.
-  - The selected value must not be orphaned so it may be useful to set the value two blocks back from the tip.
-  - Testnet should be set some tens of thousands back from the tip due to reorgs there.
-  - This update should be reviewed with a reindex-chainstate with assumevalid=0 to catch any defect
-     that causes rejection of blocks in the past history.
+* Update translations see [translation_process.md](/doc/translation_process.md#synchronising-translations).
+* Update hardcoded [seeds](/contrib/seeds/README.md), see [this pull request](https://github.com/bdtchain/bdtcoin/pull/27488) for an example.
+* Update the following variables in [`src/kernel/chainparams.cpp`](/src/kernel/chainparams.cpp) for mainnet, testnet, and signet:
+  - `m_assumed_blockchain_size` and `m_assumed_chain_state_size` with the current size plus some overhead (see
+    [this](#how-to-calculate-assumed-blockchain-and-chain-state-size) for information on how to calculate them).
+  - The following updates should be reviewed with `reindex-chainstate` and `assumevalid=0` to catch any defect
+    that causes rejection of blocks in the past history.
+  - `chainTxData` with statistics about the transaction count and rate. Use the output of the `getchaintxstats` RPC with an
+    `nBlocks` of 4096 (28 days) and a `bestblockhash` of RPC `getbestblockhash`; see
+    [this pull request](https://github.com/bdtchain/bdtcoin/pull/28591) for an example. Reviewers can verify the results by running
+    `getchaintxstats <window_block_count> <window_final_block_hash>` with the `window_block_count` and `window_final_block_hash` from your output.
+  - `defaultAssumeValid` with the output of RPC `getblockhash` using the `height` of `window_final_block_height` above
+    (and update the block height comment with that height), taking into account the following:
+    - On mainnet, the selected value must not be orphaned, so it may be useful to set the height two blocks back from the tip.
+    - Testnet should be set with a height some tens of thousands back from the tip, due to reorgs there.
+  - `nMinimumChainWork` with the "chainwork" value of RPC `getblockheader` using the same height as that selected for the previous step.
+  - `m_assumeutxo_data` array should be appended to with the values returned by calling `bdtcoin-cli -rpcclienttimeout=0 -named dumptxoutset utxo.dat rollback=<height or hash>`
+    The same height considerations for `defaultAssumeValid` apply.
+* Consider updating the headers synchronization tuning parameters to account for the chainparams updates.
+  The optimal values change very slowly, so this isn't strictly necessary every release, but doing so doesn't hurt.
+  - Update configuration variables in [`contrib/devtools/headerssync-params.py`](/contrib/devtools/headerssync-params.py):
+    - Set `TIME` to the software's expected supported lifetime -- after this time, its ability to defend against a high bandwidth timewarp attacker will begin to degrade.
+    - Set `MINCHAINWORK_HEADERS` to the height used for the `nMinimumChainWork` calculation above.
+    - Check that the other variables still look reasonable.
+  - Run the script. It works fine in CPython, but PyPy is much faster (seconds instead of minutes): `pypy3 contrib/devtools/headerssync-params.py`.
+  - Paste the output defining `HEADER_COMMITMENT_PERIOD` and `REDOWNLOAD_BUFFER_SIZE` into the top of [`src/headerssync.cpp`](/src/headerssync.cpp).
 - Clear the release notes and move them to the wiki (see "Write the release notes" below).
-
-#### After branch-off (on master)
-
-- Update the version of `contrib/gitian-descriptors/*.yml`.
+- Translations on Transifex:
+    - Pull translations from Transifex into the master branch.
+    - Create [a new resource](https://www.transifex.com/bdtcoin/bdtcoin/content/) named after the major version with the slug `qt-translation-<RRR>x`, where `RRR` is the major branch number padded with zeros. Use `src/qt/locale/bdtcoin_en.xlf` to create it.
+    - In the project workflow settings, ensure that [Translation Memory Fill-up](https://help.transifex.com/en/articles/6224817-setting-up-translation-memory-fill-up) is enabled and that [Translation Memory Context Matching](https://help.transifex.com/en/articles/6224753-translation-memory-with-context) is disabled.
+    - Update the Transifex slug in [`.tx/config`](/.tx/config) to the slug of the resource created in the first step. This identifies which resource the translations will be synchronized from.
+    - Make an announcement that translators can start translating for the new version. You can use one of the [previous announcements](https://www.transifex.com/bdtcoin/communication/) as a template.
+    - Change the auto-update URL for the resource to `master`, e.g. `https://raw.githubusercontent.com/bdtcoin/bdtcoin/master/src/qt/locale/bdtcoin_en.xlf`. (Do this only after the previous steps, to prevent an auto-update from interfering.)
 
 #### After branch-off (on the major release branch)
 
 - Update the versions.
-- Create a pinned meta-issue for testing the release candidate (see [this issue](https://github.com/bdtchain/bdtcoin/issues/17079) for an example) and provide a link to it in the release announcements where useful.
+- Create the draft, named "*version* Release Notes Draft", as a [collaborative wiki](https://github.com/bdtcoin-core/bdtcoin-devwiki/wiki/_new).
+- Clear the release notes: `cp doc/release-notes-empty-template.md doc/release-notes.md`
+- Create a pinned meta-issue for testing the release candidate (see [this issue](https://github.com/bdtchain/bdtcoin/issues/27621) for an example) and provide a link to it in the release announcements where useful.
+- Translations on Transifex
+    - Change the auto-update URL for the new major version's resource away from `master` and to the branch, e.g. `https://raw.githubusercontent.com/bdtcoin/bdtcoin/<branch>/src/qt/locale/bdtcoin_en.xlf`. Do not forget this or it will keep tracking the translations on master instead, drifting away from the specific major release.
+- Prune inputs from the qa-assets repo (See [pruning
+  inputs](https://github.com/bdtcoin-core/qa-assets#pruning-inputs)).
 
 #### Before final release
 
-- Merge the release notes from the wiki into the branch.
-- Ensure the "Needs release note" label is removed from all relevant pull requests and issues.
+- Merge the release notes from [the wiki](https://github.com/bdtcoin-core/bdtcoin-devwiki/wiki/) into the branch.
+- Ensure the "Needs release note" label is removed from all relevant pull
+  requests and issues:
+  https://github.com/bdtchain/bdtcoin/issues?q=label%3A%22Needs+release+note%22
 
+#### Tagging a release (candidate)
+
+To tag the version (or release candidate) in git, use the `make-tag.py` script from [bdtcoin-maintainer-tools](https://github.com/bdtcoin-core/bdtcoin-maintainer-tools). From the root of the repository run:
+
+    ../bdtcoin-maintainer-tools/make-tag.py v(new version, e.g. 25.0)
+
+This will perform a few last-minute consistency checks in the build system files, and if they pass, create a signed tag.
 
 ## Building
 
 ### First time / New builders
 
-If you're using the automated script (found in [contrib/gitian-build.py](/contrib/gitian-build.py)), then at this point you should run it with the "--setup" command. Otherwise ignore this.
+Install Guix using one of the installation methods detailed in
+[contrib/guix/INSTALL.md](/contrib/guix/INSTALL.md).
 
 Check out the source code in the following directory hierarchy.
 
     cd /path/to/your/toplevel/build
-    git clone https://github.com/bdtcoin-core/gitian.sigs.git
+    git clone https://github.com/bdtcoin-core/guix.sigs.git
     git clone https://github.com/bdtcoin-core/bdtcoin-detached-sigs.git
-    git clone https://github.com/devrandom/gitian-builder.git
     git clone https://github.com/bdtchain/bdtcoin.git
 
 ### Write the release notes
@@ -72,299 +109,199 @@ Open a draft of the release notes for collaborative editing at https://github.co
 
 For the period during which the notes are being edited on the wiki, the version on the branch should be wiped and replaced with a link to the wiki which should be used for all announcements until `-final`.
 
-Write the release notes. `git shortlog` helps a lot, for example:
-
-    git shortlog --no-merges v(current version, e.g. 0.19.2)..v(new version, e.g. 0.20.0)
-
-(or ping @wumpus on IRC, he has specific tooling to generate the list of merged pulls
-and sort them into categories based on labels).
-
 Generate list of authors:
 
-    git log --format='- %aN' v(current version, e.g. 0.20.0)..v(new version, e.g. 0.20.1) | sort -fiu
+    git log --format='- %aN' v(current version, e.g. 25.0)..v(new version, e.g. 25.1) | grep -v 'merge-script' | sort -fiu
 
-Tag the version (or release candidate) in git:
+### Setup and perform Guix builds
 
-    git tag -s v(new version, e.g. 0.20.0)
+Checkout the Bdtcoin Core version you'd like to build:
 
-### Setup and perform Gitian builds
+```sh
+pushd ./bdtcoin
+SIGNER='(your builder key, ie bluematt, sipa, etc)'
+VERSION='(new version without v-prefix, e.g. 25.0)'
+git fetch origin "v${VERSION}"
+git checkout "v${VERSION}"
+popd
+```
 
-If you're using the automated script (found in [contrib/gitian-build.py](/contrib/gitian-build.py)), then at this point you should run it with the "--build" command. Otherwise ignore this.
+Ensure your guix.sigs are up-to-date if you wish to `guix-verify` your builds
+against other `guix-attest` signatures.
 
-Setup Gitian descriptors:
+```sh
+git -C ./guix.sigs pull
+```
 
-    pushd ./bdtcoin
-    export SIGNER="(your Gitian key, ie bluematt, sipa, etc)"
-    export VERSION=(new version, e.g. 0.20.0)
-    git fetch
-    git checkout v${VERSION}
-    popd
+### Create the macOS SDK tarball (first time, or when SDK version changes)
 
-Ensure your gitian.sigs are up-to-date if you wish to gverify your builds against other Gitian signatures.
+Create the macOS SDK tarball, see the [macdeploy
+instructions](/contrib/macdeploy/README.md#sdk-extraction) for
+details.
 
-    pushd ./gitian.sigs
-    git pull
-    popd
+### Build and attest to build outputs
 
-Ensure gitian-builder is up-to-date:
+Follow the relevant Guix README.md sections:
+- [Building](/contrib/guix/README.md#building)
+- [Attesting to build outputs](/contrib/guix/README.md#attesting-to-build-outputs)
 
-    pushd ./gitian-builder
-    git pull
-    popd
+### Verify other builders' signatures to your own (optional)
 
-### Fetch and create inputs: (first time, or when dependency versions change)
+- [Verifying build output attestations](/contrib/guix/README.md#verifying-build-output-attestations)
 
-    pushd ./gitian-builder
-    mkdir -p inputs
-    wget -O inputs/osslsigncode-2.0.tar.gz https://github.com/mtrojnar/osslsigncode/archive/2.0.tar.gz
-    echo '5a60e0a4b3e0b4d655317b2f12a810211c50242138322b16e7e01c6fbb89d92f inputs/osslsigncode-2.0.tar.gz' | sha256sum -c
-    popd
+### Commit your non codesigned signature to guix.sigs
 
-Create the macOS SDK tarball, see the [macdeploy instructions](/contrib/macdeploy/README.md#deterministic-macos-dmg-notes) for details, and copy it into the inputs directory.
+```sh
+pushd ./guix.sigs
+git add "${VERSION}/${SIGNER}"/noncodesigned.SHA256SUMS{,.asc}
+git commit -m "Add attestations by ${SIGNER} for ${VERSION} non-codesigned"
+popd
+```
 
-### Optional: Seed the Gitian sources cache and offline git repositories
+Then open a Pull Request to the [guix.sigs repository](https://github.com/bdtcoin-core/guix.sigs).
 
-NOTE: Gitian is sometimes unable to download files. If you have errors, try the step below.
+## Codesigning
 
-By default, Gitian will fetch source files as needed. To cache them ahead of time, make sure you have checked out the tag you want to build in bdtcoin, then:
+### macOS codesigner only: Create detached macOS signatures (assuming [signapple](https://github.com/achow101/signapple/) is installed and up to date with master branch)
 
-    pushd ./gitian-builder
-    make -C ../bdtcoin/depends download SOURCES_PATH=`pwd`/cache/common
-    popd
+In the `guix-build-${VERSION}/output/x86_64-apple-darwin` and `guix-build-${VERSION}/output/arm64-apple-darwin` directories:
 
-Only missing files will be fetched, so this is safe to re-run for each build.
-
-NOTE: Offline builds must use the --url flag to ensure Gitian fetches only from local URLs. For example:
-
-    pushd ./gitian-builder
-    ./bin/gbuild --url bdtcoin=/path/to/bdtcoin,signature=/path/to/sigs {rest of arguments}
-    popd
-
-The gbuild invocations below <b>DO NOT DO THIS</b> by default.
-
-### Build and sign Bdtcoin Core for Linux, Windows, and macOS:
-
-    pushd ./gitian-builder
-    ./bin/gbuild --num-make 2 --memory 3000 --commit bdtcoin=v${VERSION} ../bdtcoin/contrib/gitian-descriptors/gitian-linux.yml
-    ./bin/gsign --signer "$SIGNER" --release ${VERSION}-linux --destination ../gitian.sigs/ ../bdtcoin/contrib/gitian-descriptors/gitian-linux.yml
-    mv build/out/bdtcoin-*.tar.gz build/out/src/bdtcoin-*.tar.gz ../
-
-    ./bin/gbuild --num-make 2 --memory 3000 --commit bdtcoin=v${VERSION} ../bdtcoin/contrib/gitian-descriptors/gitian-win.yml
-    ./bin/gsign --signer "$SIGNER" --release ${VERSION}-win-unsigned --destination ../gitian.sigs/ ../bdtcoin/contrib/gitian-descriptors/gitian-win.yml
-    mv build/out/bdtcoin-*-win-unsigned.tar.gz inputs/bdtcoin-win-unsigned.tar.gz
-    mv build/out/bdtcoin-*.zip build/out/bdtcoin-*.exe ../
-
-    ./bin/gbuild --num-make 2 --memory 3000 --commit bdtcoin=v${VERSION} ../bdtcoin/contrib/gitian-descriptors/gitian-osx.yml
-    ./bin/gsign --signer "$SIGNER" --release ${VERSION}-osx-unsigned --destination ../gitian.sigs/ ../bdtcoin/contrib/gitian-descriptors/gitian-osx.yml
-    mv build/out/bdtcoin-*-osx-unsigned.tar.gz inputs/bdtcoin-osx-unsigned.tar.gz
-    mv build/out/bdtcoin-*.tar.gz build/out/bdtcoin-*.dmg ../
-    popd
-
-Build output expected:
-
-  1. source tarball (`bdtcoin-${VERSION}.tar.gz`)
-  2. linux 32-bit and 64-bit dist tarballs (`bdtcoin-${VERSION}-linux[32|64].tar.gz`)
-  3. windows 32-bit and 64-bit unsigned installers and dist zips (`bdtcoin-${VERSION}-win[32|64]-setup-unsigned.exe`, `bdtcoin-${VERSION}-win[32|64].zip`)
-  4. macOS unsigned installer and dist tarball (`bdtcoin-${VERSION}-osx-unsigned.dmg`, `bdtcoin-${VERSION}-osx64.tar.gz`)
-  5. Gitian signatures (in `gitian.sigs/${VERSION}-<linux|{win,osx}-unsigned>/(your Gitian key)/`)
-
-### Verify other gitian builders signatures to your own. (Optional)
-
-Add other gitian builders keys to your gpg keyring, and/or refresh keys: See `../bdtcoin/contrib/gitian-keys/README.md`.
-
-Verify the signatures
-
-    pushd ./gitian-builder
-    ./bin/gverify -v -d ../gitian.sigs/ -r ${VERSION}-linux ../bdtcoin/contrib/gitian-descriptors/gitian-linux.yml
-    ./bin/gverify -v -d ../gitian.sigs/ -r ${VERSION}-win-unsigned ../bdtcoin/contrib/gitian-descriptors/gitian-win.yml
-    ./bin/gverify -v -d ../gitian.sigs/ -r ${VERSION}-osx-unsigned ../bdtcoin/contrib/gitian-descriptors/gitian-osx.yml
-    popd
-
-### Next steps:
-
-Commit your signature to gitian.sigs:
-
-    pushd gitian.sigs
-    git add ${VERSION}-linux/"${SIGNER}"
-    git add ${VERSION}-win-unsigned/"${SIGNER}"
-    git add ${VERSION}-osx-unsigned/"${SIGNER}"
-    git commit -m "Add ${VERSION} unsigned sigs for ${SIGNER}"
-    git push  # Assuming you can push to the gitian.sigs tree
-    popd
-
-Codesigner only: Create Windows/macOS detached signatures:
-- Only one person handles codesigning. Everyone else should skip to the next step.
-- Only once the Windows/macOS builds each have 3 matching signatures may they be signed with their respective release keys.
-
-Codesigner only: Sign the macOS binary:
-
-    transfer bdtcoin-osx-unsigned.tar.gz to macOS for signing
-    tar xf bdtcoin-osx-unsigned.tar.gz
-    ./detached-sig-create.sh -s "Key ID"
+    tar xf bdtcoin-${VERSION}-${ARCH}-apple-darwin-codesigning.tar.gz
+    ./detached-sig-create.sh /path/to/codesign.p12 /path/to/AuthKey_foo.p8 uuid
     Enter the keychain password and authorize the signature
-    Move signature-osx.tar.gz back to the gitian host
+    signature-osx.tar.gz will be created
 
-Codesigner only: Sign the windows binaries:
+### Windows codesigner only: Create detached Windows signatures
 
-    tar xf bdtcoin-win-unsigned.tar.gz
-    ./detached-sig-create.sh -key /path/to/codesign.key
+In the `guix-build-${VERSION}/output/x86_64-w64-mingw32` directory:
+
+    tar xf bdtcoin-${VERSION}-win64-codesigning.tar.gz
+    ./detached-sig-create.sh /path/to/codesign.key
     Enter the passphrase for the key when prompted
     signature-win.tar.gz will be created
 
-Codesigner only: Commit the detached codesign payloads:
+### Windows and macOS codesigners only: test code signatures
+It is advised to test that the code signature attaches properly prior to tagging by performing the `guix-codesign` step.
+However if this is done, once the release has been tagged in the bdtcoin-detached-sigs repo, the `guix-codesign` step must be performed again in order for the guix attestation to be valid when compared against the attestations of non-codesigner builds. The directories created by `guix-codesign` will need to be cleared prior to running `guix-codesign` again.
 
-    cd ~/bdtcoin-detached-sigs
-    checkout the appropriate branch for this release series
-    rm -rf *
-    tar xf signature-osx.tar.gz
-    tar xf signature-win.tar.gz
-    git add -A
-    git commit -m "point to ${VERSION}"
-    git tag -s v${VERSION} HEAD
-    git push the current branch and new tag
+### Windows and macOS codesigners only: Commit the detached codesign payloads
 
-Non-codesigners: wait for Windows/macOS detached signatures:
+```sh
+pushd ./bdtcoin-detached-sigs
+# checkout or create the appropriate branch for this release series
+git checkout --orphan <branch>
+# if you are the macOS codesigner
+rm -rf osx
+tar xf signature-osx.tar.gz
+# if you are the windows codesigner
+rm -rf win
+tar xf signature-win.tar.gz
+git add -A
+git commit -m "<version>: {osx,win} signature for {rc,final}"
+git tag -s "v${VERSION}" HEAD
+git push the current branch and new tag
+popd
+```
 
-- Once the Windows/macOS builds each have 3 matching signatures, they will be signed with their respective release keys.
+### Non-codesigners: wait for Windows and macOS detached signatures
+
+- Once the Windows and macOS builds each have 3 matching signatures, they will be signed with their respective release keys.
 - Detached signatures will then be committed to the [bdtcoin-detached-sigs](https://github.com/bdtcoin-core/bdtcoin-detached-sigs) repository, which can be combined with the unsigned apps to create signed binaries.
 
-Create (and optionally verify) the signed macOS binary:
+### Create the codesigned build outputs
 
-    pushd ./gitian-builder
-    ./bin/gbuild -i --commit signature=v${VERSION} ../bdtcoin/contrib/gitian-descriptors/gitian-osx-signer.yml
-    ./bin/gsign --signer "$SIGNER" --release ${VERSION}-osx-signed --destination ../gitian.sigs/ ../bdtcoin/contrib/gitian-descriptors/gitian-osx-signer.yml
-    ./bin/gverify -v -d ../gitian.sigs/ -r ${VERSION}-osx-signed ../bdtcoin/contrib/gitian-descriptors/gitian-osx-signer.yml
-    mv build/out/bdtcoin-osx-signed.dmg ../bdtcoin-${VERSION}-osx.dmg
-    popd
+- [Codesigning build outputs](/contrib/guix/README.md#codesigning-build-outputs)
 
-Create (and optionally verify) the signed Windows binaries:
+### Verify other builders' signatures to your own (optional)
 
-    pushd ./gitian-builder
-    ./bin/gbuild -i --commit signature=v${VERSION} ../bdtcoin/contrib/gitian-descriptors/gitian-win-signer.yml
-    ./bin/gsign --signer "$SIGNER" --release ${VERSION}-win-signed --destination ../gitian.sigs/ ../bdtcoin/contrib/gitian-descriptors/gitian-win-signer.yml
-    ./bin/gverify -v -d ../gitian.sigs/ -r ${VERSION}-win-signed ../bdtcoin/contrib/gitian-descriptors/gitian-win-signer.yml
-    mv build/out/bdtcoin-*win64-setup.exe ../bdtcoin-${VERSION}-win64-setup.exe
-    popd
+- [Verifying build output attestations](/contrib/guix/README.md#verifying-build-output-attestations)
 
-Commit your signature for the signed macOS/Windows binaries:
+### Commit your codesigned signature to guix.sigs (for the signed macOS/Windows binaries)
 
-    pushd gitian.sigs
-    git add ${VERSION}-osx-signed/"${SIGNER}"
-    git add ${VERSION}-win-signed/"${SIGNER}"
-    git commit -m "Add ${SIGNER} ${VERSION} signed binaries signatures"
-    git push  # Assuming you can push to the gitian.sigs tree
-    popd
+```sh
+pushd ./guix.sigs
+git add "${VERSION}/${SIGNER}"/all.SHA256SUMS{,.asc}
+git commit -m "Add attestations by ${SIGNER} for ${VERSION} codesigned"
+popd
+```
 
-### After 3 or more people have gitian-built and their results match:
+Then open a Pull Request to the [guix.sigs repository](https://github.com/bdtcoin-core/guix.sigs).
 
-- Create `SHA256SUMS.asc` for the builds, and GPG-sign it:
+## After 6 or more people have guix-built and their results match
+
+After verifying signatures, combine the `all.SHA256SUMS.asc` file from all signers into `SHA256SUMS.asc`:
 
 ```bash
-sha256sum * > SHA256SUMS
+cat "$VERSION"/*/all.SHA256SUMS.asc > SHA256SUMS.asc
 ```
 
-The list of files should be:
-```
-bdtcoin-${VERSION}-aarch64-linux-gnu.tar.gz
-bdtcoin-${VERSION}-arm-linux-gnueabihf.tar.gz
-bdtcoin-${VERSION}-riscv64-linux-gnu.tar.gz
-bdtcoin-${VERSION}-x86_64-linux-gnu.tar.gz
-bdtcoin-${VERSION}-osx64.tar.gz
-bdtcoin-${VERSION}-osx.dmg
-bdtcoin-${VERSION}.tar.gz
-bdtcoin-${VERSION}-win64-setup.exe
-bdtcoin-${VERSION}-win64.zip
-```
-The `*-debug*` files generated by the gitian build contain debug symbols
-for troubleshooting by developers. It is assumed that anyone that is interested
-in debugging can run gitian to generate the files for themselves. To avoid
-end-user confusion about which file to pick, as well as save storage
-space *do not upload these to the bdtcoin.org server, nor put them in the torrent*.
 
-- GPG-sign it, delete the unsigned file:
-```
-gpg --digest-algo sha256 --clearsign SHA256SUMS # outputs SHA256SUMS.asc
-rm SHA256SUMS
-```
-(the digest algorithm is forced to sha256 to avoid confusion of the `Hash:` header that GPG adds with the SHA256 used for the files)
-Note: check that SHA256SUMS itself doesn't end up in SHA256SUMS, which is a spurious/nonsensical entry.
+- Upload to the bdtcoincore.org server:
+    1. The contents of each `./bdtcoin/guix-build-${VERSION}/output/${HOST}/` directory.
 
-- Upload zips and installers, as well as `SHA256SUMS.asc` from last step, to the bdtcoin.org server
-  into `/var/www/bin/bdtcoin-core-${VERSION}`
+       Guix will output all of the results into host subdirectories, but the SHA256SUMS
+       file does not include these subdirectories. In order for downloads via torrent
+       to verify without directory structure modification, all of the uploaded files
+       need to be in the same directory as the SHA256SUMS file.
 
-- A `.torrent` will appear in the directory after a few minutes. Optionally help seed this torrent. To get the `magnet:` URI use:
-```bash
-transmission-show -m <torrent file>
-```
-Insert the magnet URI into the announcement sent to mailing lists. This permits
-people without access to `bdtcoin.org` to download the binary distribution.
-Also put it into the `optional_magnetlink:` slot in the YAML file for
-bdtcoin.org (see below for bdtcoin.org update instructions).
+       Wait until all of these files have finished uploading before uploading the SHA256SUMS(.asc) files.
 
-- Update bdtcoin.org version
+    2. The `SHA256SUMS` file
 
-  - First, check to see if the Bdtcoin.org maintainers have prepared a
-    release: https://github.com/bdtcoin-dot-org/bdtcoin.org/labels/Core
+    3. The `SHA256SUMS.asc` combined signature file you just created.
 
-      - If they have, it will have previously failed their Travis CI
-        checks because the final release files weren't uploaded.
-        Trigger a Travis CI rebuild---if it passes, merge.
+- After uploading release candidate binaries, notify the bdtcoin-core-dev mailing list and
+  bdtcoin-dev group that a release candidate is available for testing. Include a link to the release
+  notes draft.
 
-  - If they have not prepared a release, follow the Bdtcoin.org release
-    instructions: https://github.com/bdtcoin-dot-org/bdtcoin.org/blob/master/docs/adding-events-release-notes-and-alerts.md#release-notes
+- The server will automatically create an OpenTimestamps file and torrent of the directory.
 
-  - After the pull request is merged, the website will automatically show the newest version within 15 minutes, as well
-    as update the OS download links.
+- Optionally help seed this torrent. To get the `magnet:` URI use:
 
-- Update other repositories and websites for new version
+  ```sh
+  transmission-show -m <torrent file>
+  ```
 
-  - bdtcoincore.org blog post
+  Insert the magnet URI into the announcement sent to mailing lists. This permits
+  people without access to `bdtcoincore.org` to download the binary distribution.
+  Also put it into the `optional_magnetlink:` slot in the YAML file for
+  bdtcoincore.org.
 
-  - bdtcoincore.org maintained versions update:
-    [table](https://github.com/bdtcoin-core/bdtcoincore.org/commits/master/_includes/posts/maintenance-table.md)
+- Archive the release notes for the new version to `doc/release-notes/release-notes-${VERSION}.md`
+  (branch `master` and branch of the release).
 
-  - bdtcoincore.org RPC documentation update
+- Update the bdtcoincore.org website
+
+  - blog post
+
+  - maintained versions [table](https://github.com/bdtcoin-core/bdtcoincore.org/commits/master/_includes/posts/maintenance-table.md)
+
+  - RPC documentation update
+
+      - See https://github.com/bdtcoin-core/bdtcoincore.org/blob/master/contrib/doc-gen/
+
+
+- Update repositories
+
+  - Delete post-EOL [release branches](https://github.com/bdtchain/bdtcoin/branches/all) and create a tag `v${branch_name}-final`.
+
+  - Delete ["Needs backport" labels](https://github.com/bdtchain/bdtcoin/labels?q=backport) for non-existing branches.
 
   - Update packaging repo
 
       - Push the flatpak to flathub, e.g. https://github.com/flathub/org.bdtcoincore.bdtcoin-qt/pull/2
 
-      - Push the latest version to master (if applicable), e.g. https://github.com/bdtcoin-core/packaging/pull/32
+      - Push the snap, see https://github.com/bdtcoin-core/packaging/blob/main/snap/local/build.md
 
-      - Create a new branch for the major release "0.xx" from master (used to build the snap package) and request the
-        track (if applicable), e.g. https://forum.snapcraft.io/t/track-request-for-bdtcoin-core-snap/10112/7
-
-      - Notify MarcoFalke so that he can start building the snap package
-
-        - https://code.launchpad.net/~bdtcoin-core/bdtcoin-core-snap/+git/packaging (Click "Import Now" to fetch the branch)
-        - https://code.launchpad.net/~bdtcoin-core/bdtcoin-core-snap/+git/packaging/+ref/0.xx (Click "Create snap package")
-        - Name it "bdtcoin-core-snap-0.xx"
-        - Leave owner and series as-is
-        - Select architectures that are compiled via gitian
-        - Leave "automatically build when branch changes" unticked
-        - Tick "automatically upload to store"
-        - Put "bdtcoin-core" in the registered store package name field
-        - Tick the "edge" box
-        - Put "0.xx" in the track field
-        - Click "create snap package"
-        - Click "Request builds" for every new release on this branch (after updating the snapcraft.yml in the branch to reflect the latest gitian results)
-        - Promote release on https://snapcraft.io/bdtcoin-core/releases if it passes sanity checks
-
-  - This repo
-
-      - Archive the release notes for the new version to `doc/release-notes/` (branch `master` and branch of the release)
-
-      - Create a [new GitHub release](https://github.com/bdtchain/bdtcoin/releases/new) with a link to the archived release notes
+  - Create a [new GitHub release](https://github.com/bdtchain/bdtcoin/releases/new) with a link to the archived release notes
 
 - Announce the release:
 
   - bdtcoin-dev and bdtcoin-core-dev mailing list
 
-  - Bdtcoin Core announcements list https://bdtcoincore.org/en/list/announcements/join/
+  - Bdtcoin Core announcements list https://bdtcoin.org/en/list/announcements/join/
 
-  - Update title of #bdtcoin on Freenode IRC
-
-  - Optionally twitter, reddit /r/Bdtcoin, ... but this will usually sort out itself
+  - Bdtcoin Core Twitter https://twitter.com/bdtcoincoreorg
 
   - Celebrate
 
@@ -375,15 +312,18 @@ bdtcoin.org (see below for bdtcoin.org update instructions).
 Both variables are used as a guideline for how much space the user needs on their drive in total, not just strictly for the blockchain.
 Note that all values should be taken from a **fully synced** node and have an overhead of 5-10% added on top of its base value.
 
-To calculate `m_assumed_blockchain_size`:
-- For `mainnet` -> Take the size of the data directory, excluding `/regtest` and `/testnet3` directories.
-- For `testnet` -> Take the size of the `/testnet3` directory.
+To calculate `m_assumed_blockchain_size`, take the size in GiB of these directories:
+- For `mainnet` -> the data directory, excluding the `/testnet3`, `/testnet4`, `/signet`, and `/regtest` directories and any overly large files, e.g. a huge `debug.log`
+- For `testnet` -> `/testnet3`
+- For `testnet4` -> `/testnet4`
+- For `signet` -> `/signet`
 
-
-To calculate `m_assumed_chain_state_size`:
-- For `mainnet` -> Take the size of the `/chainstate` directory.
-- For `testnet` -> Take the size of the `/testnet3/chainstate` directory.
+To calculate `m_assumed_chain_state_size`, take the size in GiB of these directories:
+- For `mainnet` -> `/chainstate`
+- For `testnet` -> `/testnet3/chainstate`
+- For `testnet4` -> `/testnet4/chainstate`
+- For `signet` -> `/signet/chainstate`
 
 Notes:
 - When taking the size for `m_assumed_blockchain_size`, there's no need to exclude the `/chainstate` directory since it's a guideline value and an overhead will be added anyway.
-- The expected overhead for growth may change over time, so it may not be the same value as last release; pay attention to that when changing the variables.
+- The expected overhead for growth may change over time. Consider whether the percentage needs to be changed in response; if so, update it here in this section.

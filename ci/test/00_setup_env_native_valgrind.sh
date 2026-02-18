@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2019-2020 The Bdtcoin Core developers
+# Copyright (c) 2019-present The Bdtcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 export LC_ALL=C.UTF-8
 
+export CI_IMAGE_NAME_TAG="mirror.gcr.io/ubuntu:24.04"
 export CONTAINER_NAME=ci_native_valgrind
-export PACKAGES="valgrind clang llvm python3-zmq libevent-dev bsdmainutils libboost-system-dev libboost-filesystem-dev libboost-test-dev libboost-thread-dev libdb5.3++-dev libminiupnpc-dev libzmq3-dev libsqlite3-dev"
+export PACKAGES="valgrind clang-16 llvm-16 libclang-rt-16-dev python3-zmq libevent-dev libboost-dev libdb5.3++-dev libzmq3-dev libsqlite3-dev"
 export USE_VALGRIND=1
 export NO_DEPENDS=1
-export TEST_RUNNER_EXTRA="--exclude rpc_bind"  # Excluded for now, see https://github.com/bdtchain/bdtcoin/issues/17765#issuecomment-602068547
+export TEST_RUNNER_EXTRA="--exclude feature_init,rpc_bind,feature_bind_extra"  # feature_init excluded for now, see https://github.com/bdtchain/bdtcoin/issues/30011 ; bind tests excluded for now, see https://github.com/bdtchain/bdtcoin/issues/17765#issuecomment-602068547
 export GOAL="install"
-export BDTCOIN_CONFIG="--enable-zmq --with-incompatible-bdb --with-gui=no CC=clang CXX=clang++"  # TODO enable GUI
+# TODO enable GUI
+export BDTCOIN_CONFIG="\
+ -DWITH_ZMQ=ON -DWITH_BDB=ON -DWARN_INCOMPATIBLE_BDB=OFF -DBUILD_GUI=OFF \
+ -DCMAKE_C_COMPILER=clang-16 \
+ -DCMAKE_CXX_COMPILER=clang++-16 \
+"

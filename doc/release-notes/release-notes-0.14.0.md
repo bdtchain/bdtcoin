@@ -262,9 +262,9 @@ Minimum Fee Rate Policies
 -------------------------
 
 Since the changes in 0.12 to automatically limit the size of the mempool and improve the performance of block creation in mining code it has not been important for relay nodes or miners to set `-minrelaytxfee`. With this release the following concepts that were tied to this option have been separated out:
-- incremental relay fee used for calculating BIP 125 replacement and mempool limiting. (1000 juss/kB)
-- calculation of threshold for a dust output. (effectively 3 * 1000 juss/kB)
-- minimum fee rate of a package of transactions to be included in a block created by the mining code. If miners wish to set this minimum they can use the new `-blockmintxfee` option.  (defaults to 1000 juss/kB)
+- incremental relay fee used for calculating BIP 125 replacement and mempool limiting. (1000 satoshis/kB)
+- calculation of threshold for a dust output. (effectively 3 * 1000 satoshis/kB)
+- minimum fee rate of a package of transactions to be included in a block created by the mining code. If miners wish to set this minimum they can use the new `-blockmintxfee` option.  (defaults to 1000 satoshis/kB)
 
 The `-minrelaytxfee` option continues to exist but is recommended to be left unset.
 
@@ -675,7 +675,7 @@ and git merge commit are mentioned.
 - #9839 `eddaa6b` [qa] Make import-rescan.py watchonly check reliable (ryanofsky)
 
 ### Documentation
-- #7397 `806b9e7` Clarify witness branches in transaction.h serialization (dcousens)
+- #8332 `806b9e7` Clarify witness branches in transaction.h serialization (dcousens)
 - #8935 `0306978` Documentation: Building on Windows with WSL (pooleja)
 - #9144 `c98f6b3` Correct waitforblockheight example help text (fanquake)
 - #9407 `041331e` Added missing colons in when running help command (anditto)

@@ -1,37 +1,86 @@
-// Copyright (c) 2019-2020 Johir Uddin Sultan
-// Copyright (c) 2020-2021 The Bdtcoin Core developers
+// Copyright (c) 2018-2025 JUS
+// Copyright (c) 2018-2025 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <fs.h>
 #include <streams.h>
+#include <util/fs.h>
 #include <util/translation.h>
+#include <wallet/bdb.h>
 #include <wallet/salvage.h>
 #include <wallet/wallet.h>
 #include <wallet/walletdb.h>
 
+#include <db_cxx.h>
+
+namespace wallet {
 /* End of headers, beginning of key/value data */
 static const char *HEADER_END = "HEADER=END";
 /* End of key/value data */
 static const char *DATA_END = "DATA=END";
 typedef std::pair<std::vector<unsigned char>, std::vector<unsigned char> > KeyValPair;
 
-static bool KeyFilter(const std::string& type)
+class DummyCursor : public DatabaseCursor
 {
-    return WalletBatch::IsKeyType(type) || type == DBKeys::HDCHAIN;
-}
+    Status Next(DataStream& key, DataStream& value) override { return Status::FAIL; }
+};
 
-bool RecoverDatabaseFile(const fs::path& file_path, bilingual_str& error, std::vector<bilingual_str>& warnings)
+/** RAII class that provides access to a DummyDatabase. Never fails. */
+class DummyBatch : public DatabaseBatch
+{
+private:
+    bool ReadKey(DataStream&& key, DataStream& value) override { return true; }
+    bool WriteKey(DataStream&& key, DataStream&& value, bool overwrite=true) override { return true; }
+    bool EraseKey(DataStream&& key) override { return true; }
+    bool HasKey(DataStream&& key) override { return true; }
+    bool ErasePrefix(Span<const std::byte> prefix) override { return true; }
+
+public:
+    void Flush() override {}
+    void Close() override {}
+
+    std::unique_ptr<DatabaseCursor> GetNewCursor() override { return std::make_unique<DummyCursor>(); }
+    std::unique_ptr<DatabaseCursor> GetNewPrefixCursor(Span<const std::byte> prefix) override { return GetNewCursor(); }
+    bool TxnBegin() override { return true; }
+    bool TxnCommit() override { return true; }
+    bool TxnAbort() override { return true; }
+    bool HasActiveTxn() override { return false; }
+};
+
+/** A dummy WalletDatabase that does nothing and never fails. Only used by salvage.
+ **/
+class DummyDatabase : public WalletDatabase
+{
+public:
+    void Open() override {};
+    void AddRef() override {}
+    void RemoveRef() override {}
+    bool Rewrite(const char* pszSkip=nullptr) override { return true; }
+    bool Backup(const std::string& strDest) const override { return true; }
+    void Close() override {}
+    void Flush() override {}
+    bool PeriodicFlush() override { return true; }
+    void IncrementUpdateCounter() override { ++nUpdateCounter; }
+    void ReloadDbEnv() override {}
+    std::string Filename() override { return "dummy"; }
+    std::string Format() override { return "dummy"; }
+    std::unique_ptr<DatabaseBatch> MakeBatch(bool flush_on_close = true) override { return std::make_unique<DummyBatch>(); }
+};
+
+bool RecoverDatabaseFile(const ArgsManager& args, const fs::path& file_path, bilingual_str& error, std::vector<bilingual_str>& warnings)
 {
     DatabaseOptions options;
     DatabaseStatus status;
+    ReadDatabaseArgs(args, options);
     options.require_existing = true;
     options.verify = false;
+    options.require_format = DatabaseFormat::BERKELEY;
     std::unique_ptr<WalletDatabase> database = MakeDatabase(file_path, options, status, error);
     if (!database) return false;
 
-    std::string filename;
-    std::shared_ptr<BerkeleyEnvironment> env = GetWalletEnv(file_path, filename);
+    BerkeleyDatabase& berkeley_database = static_cast<BerkeleyDatabase&>(*database);
+    std::string filename = berkeley_database.Filename();
+    std::shared_ptr<BerkeleyEnvironment> env = berkeley_database.env;
 
     if (!env->Open(error)) {
         return false;
@@ -42,7 +91,7 @@ bool RecoverDatabaseFile(const fs::path& file_path, bilingual_str& error, std::v
     // Call Salvage with fAggressive=true to
     // get as much data as possible.
     // Rewrite salvaged data to fresh wallet file
-    // Set -rescan so any missing transactions will be
+    // Rescan so any missing transactions will be
     // found.
     int64_t now = GetTime();
     std::string newFilename = strprintf("%s.%d.bak", filename, now);
@@ -51,7 +100,7 @@ bool RecoverDatabaseFile(const fs::path& file_path, bilingual_str& error, std::v
                                        newFilename.c_str(), DB_AUTO_COMMIT);
     if (result != 0)
     {
-        error = strprintf(Untranslated("Failed to rename %s to %s"), filename, newFilename);
+        error = Untranslated(strprintf("Failed to rename %s to %s", filename, newFilename));
         return false;
     }
 
@@ -68,10 +117,10 @@ bool RecoverDatabaseFile(const fs::path& file_path, bilingual_str& error, std::v
     Db db(env->dbenv.get(), 0);
     result = db.verify(newFilename.c_str(), nullptr, &strDump, DB_SALVAGE | DB_AGGRESSIVE);
     if (result == DB_VERIFY_BAD) {
-        warnings.push_back(Untranslated("Salvage: Database salvage found errors, all data may not be recoverable."));
+        warnings.emplace_back(Untranslated("Salvage: Database salvage found errors, all data may not be recoverable."));
     }
     if (result != 0 && result != DB_VERIFY_BAD) {
-        error = strprintf(Untranslated("Salvage: Database salvage failed with result %d."), result);
+        error = Untranslated(strprintf("Salvage: Database salvage failed with result %d.", result));
         return false;
     }
 
@@ -95,16 +144,16 @@ bool RecoverDatabaseFile(const fs::path& file_path, bilingual_str& error, std::v
                 break;
             getline(strDump, valueHex);
             if (valueHex == DATA_END) {
-                warnings.push_back(Untranslated("Salvage: WARNING: Number of keys in data does not match number of values."));
+                warnings.emplace_back(Untranslated("Salvage: WARNING: Number of keys in data does not match number of values."));
                 break;
             }
-            salvagedData.push_back(make_pair(ParseHex(keyHex), ParseHex(valueHex)));
+            salvagedData.emplace_back(ParseHex(keyHex), ParseHex(valueHex));
         }
     }
 
     bool fSuccess;
     if (keyHex != DATA_END) {
-        warnings.push_back(Untranslated("Salvage: WARNING: Unexpected end of file while reading salvage output."));
+        warnings.emplace_back(Untranslated("Salvage: WARNING: Unexpected end of file while reading salvage output."));
         fSuccess = false;
     } else {
         fSuccess = (result == 0);
@@ -112,11 +161,11 @@ bool RecoverDatabaseFile(const fs::path& file_path, bilingual_str& error, std::v
 
     if (salvagedData.empty())
     {
-        error = strprintf(Untranslated("Salvage(aggressive) found no records in %s."), newFilename);
+        error = Untranslated(strprintf("Salvage(aggressive) found no records in %s.", newFilename));
         return false;
     }
 
-    std::unique_ptr<Db> pdbCopy = MakeUnique<Db>(env->dbenv.get(), 0);
+    std::unique_ptr<Db> pdbCopy = std::make_unique<Db>(env->dbenv.get(), 0);
     int ret = pdbCopy->open(nullptr,               // Txn pointer
                             filename.c_str(),   // Filename
                             "main",             // Logical db name
@@ -124,35 +173,42 @@ bool RecoverDatabaseFile(const fs::path& file_path, bilingual_str& error, std::v
                             DB_CREATE,          // Flags
                             0);
     if (ret > 0) {
-        error = strprintf(Untranslated("Cannot create database file %s"), filename);
+        error = Untranslated(strprintf("Cannot create database file %s", filename));
         pdbCopy->close(0);
         return false;
     }
 
-    DbTxn* ptxn = env->TxnBegin();
-    CWallet dummyWallet(nullptr, "", CreateDummyWalletDatabase());
+    DbTxn* ptxn = env->TxnBegin(DB_TXN_WRITE_NOSYNC);
+    CWallet dummyWallet(nullptr, "", std::make_unique<DummyDatabase>());
     for (KeyValPair& row : salvagedData)
     {
         /* Filter for only private key type KV pairs to be added to the salvaged wallet */
-        CDataStream ssKey(row.first, SER_DISK, CLIENT_VERSION);
-        CDataStream ssValue(row.second, SER_DISK, CLIENT_VERSION);
+        DataStream ssKey{row.first};
+        DataStream ssValue(row.second);
         std::string strType, strErr;
-        bool fReadOK;
-        {
-            // Required in LoadKeyMetadata():
-            LOCK(dummyWallet.cs_wallet);
-            fReadOK = ReadKeyValue(&dummyWallet, ssKey, ssValue, strType, strErr, KeyFilter);
-        }
-        if (!KeyFilter(strType)) {
+
+        // We only care about KEY, MASTER_KEY, CRYPTED_KEY, and HDCHAIN types
+        ssKey >> strType;
+        bool fReadOK = false;
+        if (strType == DBKeys::KEY) {
+            fReadOK = LoadKey(&dummyWallet, ssKey, ssValue, strErr);
+        } else if (strType == DBKeys::CRYPTED_KEY) {
+            fReadOK = LoadCryptedKey(&dummyWallet, ssKey, ssValue, strErr);
+        } else if (strType == DBKeys::MASTER_KEY) {
+            fReadOK = LoadEncryptionKey(&dummyWallet, ssKey, ssValue, strErr);
+        } else if (strType == DBKeys::HDCHAIN) {
+            fReadOK = LoadHDChain(&dummyWallet, ssValue, strErr);
+        } else {
             continue;
         }
+
         if (!fReadOK)
         {
-            warnings.push_back(strprintf(Untranslated("WARNING: WalletBatch::Recover skipping %s: %s"), strType, strErr));
+            warnings.push_back(Untranslated(strprintf("WARNING: WalletBatch::Recover skipping %s: %s", strType, strErr)));
             continue;
         }
-        Dbt datKey(&row.first[0], row.first.size());
-        Dbt datValue(&row.second[0], row.second.size());
+        Dbt datKey(row.first.data(), row.first.size());
+        Dbt datValue(row.second.data(), row.second.size());
         int ret2 = pdbCopy->put(ptxn, &datKey, &datValue, DB_NOOVERWRITE);
         if (ret2 > 0)
             fSuccess = false;
@@ -162,3 +218,4 @@ bool RecoverDatabaseFile(const fs::path& file_path, bilingual_str& error, std::v
 
     return fSuccess;
 }
+} // namespace wallet

@@ -1,61 +1,134 @@
-FreeBSD build guide
-======================
-(updated for FreeBSD 12.0)
+# FreeBSD Build Guide
 
-This guide describes how to build bdtcoind and command-line utilities on FreeBSD.
+**Updated for FreeBSD [14.0](https://www.freebsd.org/releases/14.0R/announce/)**
 
-This guide does not contain instructions for building the GUI.
+This guide describes how to build bdtcoind, command-line utilities, and GUI on FreeBSD.
 
 ## Preparation
 
-You will need the following dependencies, which can be installed as root via pkg:
+### 1. Install Required Dependencies
+Run the following as root to install the base dependencies for building.
 
 ```bash
-pkg install autoconf automake boost-libs git gmake libevent libtool pkgconf
-
-git clone https://github.com/bdtchain/bdtcoin.git
-```
-
-In order to run the test suite (recommended), you will need to have Python 3 installed:
-
-```bash
-pkg install python3
+pkg install boost-libs cmake git libevent pkgconf
 ```
 
 See [dependencies.md](dependencies.md) for a complete overview.
 
-### Building BerkeleyDB
+### 2. Clone Bdtcoin Repo
+Now that `git` and all the required dependencies are installed, let's clone the Bdtcoin Core repository to a directory. All build scripts and commands will run from this directory.
+```bash
+git clone https://github.com/bdtchain/bdtcoin.git
+```
 
-BerkeleyDB is only necessary for the wallet functionality. To skip this, pass
-`--disable-wallet` to `./configure` and skip to the next section.
+### 3. Install Optional Dependencies
+
+#### Wallet Dependencies
+It is not necessary to build wallet functionality to run either `bdtcoind` or `bdtcoin-qt`.
+
+###### Descriptor Wallet Support
+
+`sqlite3` is required to support [descriptor wallets](descriptors.md).
+Skip if you don't intend to use descriptor wallets.
+```bash
+pkg install sqlite3
+```
+
+###### Legacy Wallet Support
+BerkeleyDB is only required if legacy wallet support is required.
+
+It is required to use Berkeley DB 4.8. You **cannot** use the BerkeleyDB library
+from ports. However, you can build DB 4.8 yourself [using depends](/depends).
 
 ```bash
-./contrib/install_db4.sh `pwd`
-export BDB_PREFIX="$PWD/db4"
+pkg install gmake
+gmake -C depends NO_BOOST=1 NO_LIBEVENT=1 NO_QT=1 NO_SQLITE=1 NO_ZMQ=1 NO_USDT=1
 ```
+
+When the build is complete, the Berkeley DB installation location will be displayed:
+
+```
+to: /path/to/bdtcoin/depends/x86_64-unknown-freebsd[release-number]
+```
+
+Finally, set `BDB_PREFIX` to this path according to your shell:
+
+```
+csh: setenv BDB_PREFIX [path displayed above]
+```
+
+```
+sh/bash: export BDB_PREFIX=[path displayed above]
+```
+
+#### GUI Dependencies
+###### Qt5
+
+Bdtcoin Core includes a GUI built with the cross-platform Qt Framework. To compile the GUI, we need to install
+the necessary parts of Qt, the libqrencode and pass `-DBUILD_GUI=ON`. Skip if you don't intend to use the GUI.
+
+```bash
+pkg install qt5-buildtools qt5-core qt5-gui qt5-linguisttools qt5-testlib qt5-widgets
+```
+
+###### libqrencode
+
+The GUI will be able to encode addresses in QR codes unless this feature is explicitly disabled. To install libqrencode, run:
+
+```bash
+pkg install libqrencode
+```
+
+Otherwise, if you don't need QR encoding support, use the `-DWITH_QRENCODE=OFF` option to disable this feature in order to compile the GUI.
+
+---
+
+#### Notifications
+###### ZeroMQ
+
+Bdtcoin Core can provide notifications via ZeroMQ. If the package is installed, support will be compiled in.
+```bash
+pkg install libzmq4
+```
+
+#### Test Suite Dependencies
+There is an included test suite that is useful for testing code changes when developing.
+To run the test suite (recommended), you will need to have Python 3 installed:
+
+```bash
+pkg install python3 databases/py-sqlite3 net/py-pyzmq
+```
+---
 
 ## Building Bdtcoin Core
 
-**Important**: Use `gmake` (the non-GNU `make` will exit with an error).
+### 1. Configuration
 
-With wallet:
+There are many ways to configure Bdtcoin Core, here are a few common examples:
+
+##### Descriptor Wallet and GUI:
+This disables legacy wallet support and enables the GUI, assuming `sqlite` and `qt` are installed.
 ```bash
-./autogen.sh
-./configure --with-gui=no \
-    BDB_LIBS="-L${BDB_PREFIX}/lib -ldb_cxx-4.8" \
-    BDB_CFLAGS="-I${BDB_PREFIX}/include" \
-    MAKE=gmake
+cmake -B build -DWITH_BDB=OFF -DBUILD_GUI=ON
 ```
 
-Without wallet:
+Run `cmake -B build -LH` to see the full list of available options.
+
+##### Descriptor & Legacy Wallet. No GUI:
+This enables support for both wallet types, assuming
+`sqlite3` and `db4` are both installed.
 ```bash
-./autogen.sh
-./configure --with-gui=no --disable-wallet MAKE=gmake
+cmake -B build -DBerkeleyDB_INCLUDE_DIR:PATH="${BDB_PREFIX}/include" -DWITH_BDB=ON
 ```
 
-followed by:
+##### No Wallet or GUI
+```bash
+cmake -B build -DENABLE_WALLET=OFF
+```
+
+### 2. Compile
 
 ```bash
-gmake # use -jX here for parallelism
-gmake check # Run tests if Python 3 is available
+cmake --build build     # Use "-j N" for N parallel jobs.
+ctest --test-dir build  # Use "-j N" for N parallel tests. Some tests are disabled if Python 3 is not available.
 ```

@@ -1,12 +1,11 @@
-// Copyright (c) 2019Johir Uddin Sultan
-// Copyright (c) 2021-2022 The Bdtcoin Core developers
+// Copyright (c) 2018 JUS
+// Copyright (c) 2018-2025 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BDTCOIN_RPC_SERVER_H
 #define BDTCOIN_RPC_SERVER_H
 
-#include <amount.h>
 #include <rpc/request.h>
 #include <rpc/util.h>
 
@@ -17,15 +16,7 @@
 
 #include <univalue.h>
 
-static const unsigned int DEFAULT_RPC_SERIALIZE_VERSION = 1;
-
 class CRPCCommand;
-
-namespace RPCServer
-{
-    void OnStarted(std::function<void ()> slot);
-    void OnStopped(std::function<void ()> slot);
-}
 
 /** Query whether RPC is running */
 bool IsRPCRunning();
@@ -51,7 +42,7 @@ bool RPCIsInWarmup(std::string *outStatus);
 class RPCTimerBase
 {
 public:
-    virtual ~RPCTimerBase() {}
+    virtual ~RPCTimerBase() = default;
 };
 
 /**
@@ -60,7 +51,7 @@ public:
 class RPCTimerInterface
 {
 public:
-    virtual ~RPCTimerInterface() {}
+    virtual ~RPCTimerInterface() = default;
     /** Implementation name */
     virtual const char *Name() = 0;
     /** Factory function for timers.
@@ -85,7 +76,6 @@ void RPCUnsetTimerInterface(RPCTimerInterface *iface);
  */
 void RPCRunLater(const std::string& name, std::function<void()> func, int64_t nSeconds);
 
-typedef UniValue(*rpcfn_type)(const JSONRPCRequest& jsonRequest);
 typedef RPCHelpMan (*RpcMethodFnType)();
 
 class CRPCCommand
@@ -97,14 +87,14 @@ public:
     using Actor = std::function<bool(const JSONRPCRequest& request, UniValue& result, bool last_handler)>;
 
     //! Constructor taking Actor callback supporting multiple handlers.
-    CRPCCommand(std::string category, std::string name, Actor actor, std::vector<std::string> args, intptr_t unique_id)
+    CRPCCommand(std::string category, std::string name, Actor actor, std::vector<std::pair<std::string, bool>> args, intptr_t unique_id)
         : category(std::move(category)), name(std::move(name)), actor(std::move(actor)), argNames(std::move(args)),
           unique_id(unique_id)
     {
     }
 
     //! Simplified constructor taking plain RpcMethodFnType function pointer.
-    CRPCCommand(std::string category, std::string name_in, RpcMethodFnType fn, std::vector<std::string> args_in)
+    CRPCCommand(std::string category, RpcMethodFnType fn)
         : CRPCCommand(
               category,
               fn().m_name,
@@ -112,22 +102,21 @@ public:
               fn().GetArgNames(),
               intptr_t(fn))
     {
-        CHECK_NONFATAL(fn().m_name == name_in);
-        CHECK_NONFATAL(fn().GetArgNames() == args_in);
-    }
-
-    //! Simplified constructor taking plain rpcfn_type function pointer.
-    CRPCCommand(const char* category, const char* name, rpcfn_type fn, std::initializer_list<const char*> args)
-        : CRPCCommand(category, name,
-                      [fn](const JSONRPCRequest& request, UniValue& result, bool) { result = fn(request); return true; },
-                      {args.begin(), args.end()}, intptr_t(fn))
-    {
     }
 
     std::string category;
     std::string name;
     Actor actor;
-    std::vector<std::string> argNames;
+    //! List of method arguments and whether they are named-only. Incoming RPC
+    //! requests contain a "params" field that can either be an array containing
+    //! unnamed arguments or an object containing named arguments. The
+    //! "argNames" vector is used in the latter case to transform the params
+    //! object into an array. Each argument in "argNames" gets mapped to a
+    //! unique position in the array, based on the order it is listed, unless
+    //! the argument is a named-only argument with argNames[x].second set to
+    //! true. Named-only arguments are combined into a JSON object that is
+    //! appended after other arguments, see transformNamedArguments for details.
+    std::vector<std::pair<std::string, bool>> argNames;
     intptr_t unique_id;
 };
 
@@ -156,6 +145,10 @@ public:
     */
     std::vector<std::string> listCommands() const;
 
+    /**
+     * Return all named arguments that need to be converted by the client from string to another JSON type
+     */
+    UniValue dumpArgMap(const JSONRPCRequest& request) const;
 
     /**
      * Appends a CRPCCommand to the dispatch table.
@@ -180,9 +173,6 @@ extern CRPCTable tableRPC;
 void StartRPC();
 void InterruptRPC();
 void StopRPC();
-std::string JSONRPCExecBatch(const JSONRPCRequest& jreq, const UniValue& vReq);
-
-// Retrieves any serialization flags requested in command line argument
-int RPCSerializationFlags();
+UniValue JSONRPCExec(const JSONRPCRequest& jreq, bool catch_errors);
 
 #endif // BDTCOIN_RPC_SERVER_H

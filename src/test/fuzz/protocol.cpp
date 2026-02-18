@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <vector>
 
-void test_one_input(const std::vector<uint8_t>& buffer)
+FUZZ_TARGET(protocol)
 {
     FuzzedDataProvider fuzzed_data_provider(buffer.data(), buffer.size());
     const std::optional<CInv> inv = ConsumeDeserializable<CInv>(fuzzed_data_provider);
@@ -20,7 +20,7 @@ void test_one_input(const std::vector<uint8_t>& buffer)
         return;
     }
     try {
-        (void)inv->GetCommand();
+        (void)inv->GetMessageType();
     } catch (const std::out_of_range&) {
     }
     (void)inv->ToString();

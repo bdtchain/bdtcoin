@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2014-2018 The Bdtcoin Core developers
+# Copyright (c) 2014-2021 The Bdtcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,11 +8,11 @@
 
     Bdtcoin should be started with the command line arguments:
         bdtcoind -testnet -daemon \
-                -zmqpubrawtx=tcp://127.0.0.1:27397 \
-                -zmqpubrawblock=tcp://127.0.0.1:27397 \
-                -zmqpubhashtx=tcp://127.0.0.1:27397 \
-                -zmqpubhashblock=tcp://127.0.0.1:27397 \
-                -zmqpubsequence=tcp://127.0.0.1:27397
+                -zmqpubrawtx=tcp://127.0.0.1:28332 \
+                -zmqpubrawblock=tcp://127.0.0.1:28332 \
+                -zmqpubhashtx=tcp://127.0.0.1:28332 \
+                -zmqpubhashblock=tcp://127.0.0.1:28332 \
+                -zmqpubsequence=tcp://127.0.0.1:28332
 
     We use the asyncio library here.  `self.handle()` installs itself as a
     future at the end of the function.  Since it never returns with the event
@@ -23,7 +23,6 @@
     https://github.com/bdtchain/bdtcoin/blob/37a7fe9e440b83e2364d5498931253937abe9294/contrib/zmq/zmq_sub.py
 """
 
-import binascii
 import asyncio
 import zmq
 import zmq.asyncio
@@ -35,7 +34,7 @@ if (sys.version_info.major, sys.version_info.minor) < (3, 5):
     print("This example only works with Python 3.5 and greater")
     sys.exit(1)
 
-port = 27397
+port = 28332
 
 class ZMQHandler():
     def __init__(self):
@@ -58,18 +57,18 @@ class ZMQHandler():
             sequence = str(struct.unpack('<I', seq)[-1])
         if topic == b"hashblock":
             print('- HASH BLOCK ('+sequence+') -')
-            print(binascii.hexlify(body))
+            print(body.hex())
         elif topic == b"hashtx":
             print('- HASH TX  ('+sequence+') -')
-            print(binascii.hexlify(body))
+            print(body.hex())
         elif topic == b"rawblock":
             print('- RAW BLOCK HEADER ('+sequence+') -')
-            print(binascii.hexlify(body[:80]))
+            print(body[:80].hex())
         elif topic == b"rawtx":
             print('- RAW TX ('+sequence+') -')
-            print(binascii.hexlify(body))
+            print(body.hex())
         elif topic == b"sequence":
-            hash = binascii.hexlify(body[:32])
+            hash = body[:32].hex()
             label = chr(body[32])
             mempool_sequence = None if len(body) != 32+1+8 else struct.unpack("<Q", body[32+1:])[0]
             print('- SEQUENCE ('+sequence+') -')

@@ -1,10 +1,10 @@
-// Copyright (c) 2014-2020 The Bdtcoin Core developers
+// Copyright (c) 2014-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <crypto/aes.h>
 #include <crypto/chacha20.h>
-#include <crypto/chacha_poly_aead.h>
+#include <crypto/chacha20poly1305.h>
 #include <crypto/hkdf_sha256_32.h>
 #include <crypto/hmac_sha256.h>
 #include <crypto/hmac_sha512.h>
@@ -14,24 +14,31 @@
 #include <crypto/sha256.h>
 #include <crypto/sha3.h>
 #include <crypto/sha512.h>
+#include <crypto/muhash.h>
 #include <random.h>
+#include <streams.h>
+#include <test/util/random.h>
 #include <test/util/setup_common.h>
 #include <util/strencodings.h>
 
+#include <algorithm>
 #include <vector>
 
 #include <boost/test/unit_test.hpp>
 
-BOOST_FIXTURE_TEST_SUITE(crypto_tests, BasicTestingSetup)
+using namespace util::hex_literals;
+
+namespace crypto_tests {
+struct CryptoTest : BasicTestingSetup {
 
 template<typename Hasher, typename In, typename Out>
-static void TestVector(const Hasher &h, const In &in, const Out &out) {
+void TestVector(const Hasher &h, const In &in, const Out &out) {
     Out hash;
     BOOST_CHECK(out.size() == h.OUTPUT_SIZE);
     hash.resize(out.size());
     {
         // Test that writing the whole input string at once works.
-        Hasher(h).Write((unsigned char*)&in[0], in.size()).Finalize(&hash[0]);
+        Hasher(h).Write((const uint8_t*)in.data(), in.size()).Finalize(hash.data());
         BOOST_CHECK(hash == out);
     }
     for (int i=0; i<32; i++) {
@@ -39,36 +46,36 @@ static void TestVector(const Hasher &h, const In &in, const Out &out) {
         Hasher hasher(h);
         size_t pos = 0;
         while (pos < in.size()) {
-            size_t len = InsecureRandRange((in.size() - pos + 1) / 2 + 1);
-            hasher.Write((unsigned char*)&in[pos], len);
+            size_t len = m_rng.randrange((in.size() - pos + 1) / 2 + 1);
+            hasher.Write((const uint8_t*)in.data() + pos, len);
             pos += len;
             if (pos > 0 && pos + 2 * out.size() > in.size() && pos < in.size()) {
                 // Test that writing the rest at once to a copy of a hasher works.
-                Hasher(hasher).Write((unsigned char*)&in[pos], in.size() - pos).Finalize(&hash[0]);
+                Hasher(hasher).Write((const uint8_t*)in.data() + pos, in.size() - pos).Finalize(hash.data());
                 BOOST_CHECK(hash == out);
             }
         }
-        hasher.Finalize(&hash[0]);
+        hasher.Finalize(hash.data());
         BOOST_CHECK(hash == out);
     }
 }
 
-static void TestSHA1(const std::string &in, const std::string &hexout) { TestVector(CSHA1(), in, ParseHex(hexout));}
-static void TestSHA256(const std::string &in, const std::string &hexout) { TestVector(CSHA256(), in, ParseHex(hexout));}
-static void TestSHA512(const std::string &in, const std::string &hexout) { TestVector(CSHA512(), in, ParseHex(hexout));}
-static void TestRIPEMD160(const std::string &in, const std::string &hexout) { TestVector(CRIPEMD160(), in, ParseHex(hexout));}
+void TestSHA1(const std::string &in, const std::string &hexout) { TestVector(CSHA1(), in, ParseHex(hexout));}
+void TestSHA256(const std::string &in, const std::string &hexout) { TestVector(CSHA256(), in, ParseHex(hexout));}
+void TestSHA512(const std::string &in, const std::string &hexout) { TestVector(CSHA512(), in, ParseHex(hexout));}
+void TestRIPEMD160(const std::string &in, const std::string &hexout) { TestVector(CRIPEMD160(), in, ParseHex(hexout));}
 
-static void TestHMACSHA256(const std::string &hexkey, const std::string &hexin, const std::string &hexout) {
+void TestHMACSHA256(const std::string &hexkey, const std::string &hexin, const std::string &hexout) {
     std::vector<unsigned char> key = ParseHex(hexkey);
     TestVector(CHMAC_SHA256(key.data(), key.size()), ParseHex(hexin), ParseHex(hexout));
 }
 
-static void TestHMACSHA512(const std::string &hexkey, const std::string &hexin, const std::string &hexout) {
+void TestHMACSHA512(const std::string &hexkey, const std::string &hexin, const std::string &hexout) {
     std::vector<unsigned char> key = ParseHex(hexkey);
     TestVector(CHMAC_SHA512(key.data(), key.size()), ParseHex(hexin), ParseHex(hexout));
 }
 
-static void TestAES256(const std::string &hexkey, const std::string &hexin, const std::string &hexout)
+void TestAES256(const std::string &hexkey, const std::string &hexin, const std::string &hexout)
 {
     std::vector<unsigned char> key = ParseHex(hexkey);
     std::vector<unsigned char> in = ParseHex(hexin);
@@ -87,7 +94,7 @@ static void TestAES256(const std::string &hexkey, const std::string &hexin, cons
     BOOST_CHECK(buf == in);
 }
 
-static void TestAES256CBC(const std::string &hexkey, const std::string &hexiv, bool pad, const std::string &hexin, const std::string &hexout)
+void TestAES256CBC(const std::string &hexkey, const std::string &hexiv, bool pad, const std::string &hexin, const std::string &hexout)
 {
     std::vector<unsigned char> key = ParseHex(hexkey);
     std::vector<unsigned char> iv = ParseHex(hexiv);
@@ -128,50 +135,210 @@ static void TestAES256CBC(const std::string &hexkey, const std::string &hexiv, b
     }
 }
 
-static void TestChaCha20(const std::string &hex_message, const std::string &hexkey, uint64_t nonce, uint64_t seek, const std::string& hexout)
+void TestChaCha20(const std::string &hex_message, const std::string &hexkey, ChaCha20::Nonce96 nonce, uint32_t seek, const std::string& hexout)
 {
-    std::vector<unsigned char> key = ParseHex(hexkey);
-    std::vector<unsigned char> m = ParseHex(hex_message);
-    ChaCha20 rng(key.data(), key.size());
-    rng.SetIV(nonce);
-    rng.Seek(seek);
-    std::vector<unsigned char> out = ParseHex(hexout);
-    std::vector<unsigned char> outres;
-    outres.resize(out.size());
-    assert(hex_message.empty() || m.size() == out.size());
+    auto key = ParseHex<std::byte>(hexkey);
+    assert(key.size() == 32);
+    auto m = ParseHex<std::byte>(hex_message);
+    ChaCha20 rng{key};
+    rng.Seek(nonce, seek);
+    std::vector<std::byte> outres;
+    outres.resize(hexout.size() / 2);
+    assert(hex_message.empty() || m.size() * 2 == hexout.size());
 
     // perform the ChaCha20 round(s), if message is provided it will output the encrypted ciphertext otherwise the keystream
     if (!hex_message.empty()) {
-        rng.Crypt(m.data(), outres.data(), outres.size());
+        rng.Crypt(m, outres);
     } else {
-        rng.Keystream(outres.data(), outres.size());
+        rng.Keystream(outres);
     }
-    BOOST_CHECK(out == outres);
+    BOOST_CHECK_EQUAL(hexout, HexStr(outres));
     if (!hex_message.empty()) {
         // Manually XOR with the keystream and compare the output
-        rng.SetIV(nonce);
-        rng.Seek(seek);
-        std::vector<unsigned char> only_keystream(outres.size());
-        rng.Keystream(only_keystream.data(), only_keystream.size());
+        rng.Seek(nonce, seek);
+        std::vector<std::byte> only_keystream(outres.size());
+        rng.Keystream(only_keystream);
         for (size_t i = 0; i != m.size(); i++) {
             outres[i] = m[i] ^ only_keystream[i];
         }
-        BOOST_CHECK(out == outres);
+        BOOST_CHECK_EQUAL(hexout, HexStr(outres));
+    }
+
+    // Repeat 10x, but fragmented into 3 chunks, to exercise the ChaCha20 class's caching.
+    for (int i = 0; i < 10; ++i) {
+        size_t lens[3];
+        lens[0] = m_rng.randrange(hexout.size() / 2U + 1U);
+        lens[1] = m_rng.randrange(hexout.size() / 2U + 1U - lens[0]);
+        lens[2] = hexout.size() / 2U - lens[0] - lens[1];
+
+        rng.Seek(nonce, seek);
+        outres.assign(hexout.size() / 2U, {});
+        size_t pos = 0;
+        for (int j = 0; j < 3; ++j) {
+            if (!hex_message.empty()) {
+                rng.Crypt(Span{m}.subspan(pos, lens[j]), Span{outres}.subspan(pos, lens[j]));
+            } else {
+                rng.Keystream(Span{outres}.subspan(pos, lens[j]));
+            }
+            pos += lens[j];
+        }
+        BOOST_CHECK_EQUAL(hexout, HexStr(outres));
     }
 }
 
-static void TestPoly1305(const std::string &hexmessage, const std::string &hexkey, const std::string& hextag)
+void TestFSChaCha20(const std::string& hex_plaintext, const std::string& hexkey, uint32_t rekey_interval, const std::string& ciphertext_after_rotation)
 {
-    std::vector<unsigned char> key = ParseHex(hexkey);
-    std::vector<unsigned char> m = ParseHex(hexmessage);
-    std::vector<unsigned char> tag = ParseHex(hextag);
-    std::vector<unsigned char> tagres;
-    tagres.resize(POLY1305_TAGLEN);
-    poly1305_auth(tagres.data(), m.data(), m.size(), key.data());
-    BOOST_CHECK(tag == tagres);
+    auto key = ParseHex<std::byte>(hexkey);
+    BOOST_CHECK_EQUAL(FSChaCha20::KEYLEN, key.size());
+
+    auto plaintext = ParseHex<std::byte>(hex_plaintext);
+
+    auto fsc20 = FSChaCha20{key, rekey_interval};
+    auto c20 = ChaCha20{key};
+
+    std::vector<std::byte> fsc20_output;
+    fsc20_output.resize(plaintext.size());
+
+    std::vector<std::byte> c20_output;
+    c20_output.resize(plaintext.size());
+
+    for (size_t i = 0; i < rekey_interval; i++) {
+        fsc20.Crypt(plaintext, fsc20_output);
+        c20.Crypt(plaintext, c20_output);
+        BOOST_CHECK(c20_output == fsc20_output);
+    }
+
+    // At the rotation interval, the outputs will no longer match
+    fsc20.Crypt(plaintext, fsc20_output);
+    auto c20_copy = c20;
+    c20.Crypt(plaintext, c20_output);
+    BOOST_CHECK(c20_output != fsc20_output);
+
+    std::byte new_key[FSChaCha20::KEYLEN];
+    c20_copy.Keystream(new_key);
+    c20.SetKey(new_key);
+    c20.Seek({0, 1}, 0);
+
+    // Outputs should match again after simulating key rotation
+    c20.Crypt(plaintext, c20_output);
+    BOOST_CHECK(c20_output == fsc20_output);
+
+    BOOST_CHECK_EQUAL(HexStr(fsc20_output), ciphertext_after_rotation);
 }
 
-static void TestHKDF_SHA256_32(const std::string &ikm_hex, const std::string &salt_hex, const std::string &info_hex, const std::string &okm_check_hex) {
+void TestPoly1305(const std::string &hexmessage, const std::string &hexkey, const std::string& hextag)
+{
+    auto key = ParseHex<std::byte>(hexkey);
+    auto m = ParseHex<std::byte>(hexmessage);
+    std::vector<std::byte> tagres(Poly1305::TAGLEN);
+    Poly1305{key}.Update(m).Finalize(tagres);
+    BOOST_CHECK_EQUAL(HexStr(tagres), hextag);
+
+    // Test incremental interface
+    for (int splits = 0; splits < 10; ++splits) {
+        for (int iter = 0; iter < 10; ++iter) {
+            auto data = Span{m};
+            Poly1305 poly1305{key};
+            for (int chunk = 0; chunk < splits; ++chunk) {
+                size_t now = m_rng.randrange(data.size() + 1);
+                poly1305.Update(data.first(now));
+                data = data.subspan(now);
+            }
+            tagres.assign(Poly1305::TAGLEN, std::byte{});
+            poly1305.Update(data).Finalize(tagres);
+            BOOST_CHECK_EQUAL(HexStr(tagres), hextag);
+        }
+    }
+}
+
+void TestChaCha20Poly1305(const std::string& plain_hex, const std::string& aad_hex, const std::string& key_hex, ChaCha20::Nonce96 nonce, const std::string& cipher_hex)
+{
+    auto plain = ParseHex<std::byte>(plain_hex);
+    auto aad = ParseHex<std::byte>(aad_hex);
+    auto key = ParseHex<std::byte>(key_hex);
+    auto expected_cipher = ParseHex<std::byte>(cipher_hex);
+
+    for (int i = 0; i < 10; ++i) {
+        // During i=0, use single-plain Encrypt/Decrypt; others use a split at prefix.
+        size_t prefix = i ? m_rng.randrange(plain.size() + 1) : plain.size();
+        // Encrypt.
+        std::vector<std::byte> cipher(plain.size() + AEADChaCha20Poly1305::EXPANSION);
+        AEADChaCha20Poly1305 aead{key};
+        if (i == 0) {
+            aead.Encrypt(plain, aad, nonce, cipher);
+        } else {
+            aead.Encrypt(Span{plain}.first(prefix), Span{plain}.subspan(prefix), aad, nonce, cipher);
+        }
+        BOOST_CHECK(cipher == expected_cipher);
+
+        // Decrypt.
+        std::vector<std::byte> decipher(cipher.size() - AEADChaCha20Poly1305::EXPANSION);
+        bool ret{false};
+        if (i == 0) {
+            ret = aead.Decrypt(cipher, aad, nonce, decipher);
+        } else {
+            ret = aead.Decrypt(cipher, aad, nonce, Span{decipher}.first(prefix), Span{decipher}.subspan(prefix));
+        }
+        BOOST_CHECK(ret);
+        BOOST_CHECK(decipher == plain);
+    }
+
+    // Test Keystream output.
+    std::vector<std::byte> keystream(plain.size());
+    AEADChaCha20Poly1305 aead{key};
+    aead.Keystream(nonce, keystream);
+    for (size_t i = 0; i < plain.size(); ++i) {
+        BOOST_CHECK_EQUAL(plain[i] ^ keystream[i], expected_cipher[i]);
+    }
+}
+
+void TestFSChaCha20Poly1305(const std::string& plain_hex, const std::string& aad_hex, const std::string& key_hex, uint64_t msg_idx, const std::string& cipher_hex)
+{
+    auto plain = ParseHex<std::byte>(plain_hex);
+    auto aad = ParseHex<std::byte>(aad_hex);
+    auto key = ParseHex<std::byte>(key_hex);
+    auto expected_cipher = ParseHex<std::byte>(cipher_hex);
+    std::vector<std::byte> cipher(plain.size() + FSChaCha20Poly1305::EXPANSION);
+
+    for (int it = 0; it < 10; ++it) {
+        // During it==0 we use the single-plain Encrypt/Decrypt; others use a split at prefix.
+        size_t prefix = it ? m_rng.randrange(plain.size() + 1) : plain.size();
+        std::byte dummy_tag[FSChaCha20Poly1305::EXPANSION] = {{}};
+
+        // Do msg_idx dummy encryptions to seek to the correct packet.
+        FSChaCha20Poly1305 enc_aead{key, 224};
+        for (uint64_t i = 0; i < msg_idx; ++i) {
+            enc_aead.Encrypt(Span{dummy_tag}.first(0), Span{dummy_tag}.first(0), dummy_tag);
+        }
+
+        // Invoke single-plain or plain1/plain2 Encrypt.
+        if (it == 0) {
+            enc_aead.Encrypt(plain, aad, cipher);
+        } else {
+            enc_aead.Encrypt(Span{plain}.first(prefix), Span{plain}.subspan(prefix), aad, cipher);
+        }
+        BOOST_CHECK(cipher == expected_cipher);
+
+        // Do msg_idx dummy decryptions to seek to the correct packet.
+        FSChaCha20Poly1305 dec_aead{key, 224};
+        for (uint64_t i = 0; i < msg_idx; ++i) {
+            dec_aead.Decrypt(dummy_tag, Span{dummy_tag}.first(0), Span{dummy_tag}.first(0));
+        }
+
+        // Invoke single-plain or plain1/plain2 Decrypt.
+        std::vector<std::byte> decipher(cipher.size() - AEADChaCha20Poly1305::EXPANSION);
+        bool ret{false};
+        if (it == 0) {
+            ret = dec_aead.Decrypt(cipher, aad, decipher);
+        } else {
+            ret = dec_aead.Decrypt(cipher, aad, Span{decipher}.first(prefix), Span{decipher}.subspan(prefix));
+        }
+        BOOST_CHECK(ret);
+        BOOST_CHECK(decipher == plain);
+    }
+}
+
+void TestHKDF_SHA256_32(const std::string &ikm_hex, const std::string &salt_hex, const std::string &info_hex, const std::string &okm_check_hex) {
     std::vector<unsigned char> initial_key_material = ParseHex(ikm_hex);
     std::vector<unsigned char> salt = ParseHex(salt_hex);
     std::vector<unsigned char> info = ParseHex(info_hex);
@@ -187,6 +354,10 @@ static void TestHKDF_SHA256_32(const std::string &ikm_hex, const std::string &sa
     BOOST_CHECK(HexStr(out) == okm_check_hex);
 }
 
+void TestSHA3_256(const std::string& input, const std::string& output);
+}; // struct CryptoTests
+} // namespace crypto_tests
+
 static std::string LongTestString()
 {
     std::string ret;
@@ -201,6 +372,8 @@ static std::string LongTestString()
 }
 
 const std::string test1 = LongTestString();
+
+BOOST_FIXTURE_TEST_SUITE(crypto_tests, CryptoTest)
 
 BOOST_AUTO_TEST_CASE(ripemd160_testvectors) {
     TestRIPEMD160("", "9c1185a5c5e9fc54612808977ee8f548b2258d31");
@@ -458,44 +631,221 @@ BOOST_AUTO_TEST_CASE(aes_cbc_testvectors) {
 
 BOOST_AUTO_TEST_CASE(chacha20_testvector)
 {
-    // Test vector from RFC 7539
+    /* Example from RFC8439 section 2.3.2. */
+    TestChaCha20("",
+                 "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+                 {0x09000000, 0x4a000000}, 1,
+                 "10f1e7e4d13b5915500fdd1fa32071c4c7d1f4c733c068030422aa9ac3d46c4e"
+                 "d2826446079faa0914c2d705d98b02a2b5129cd1de164eb9cbd083e8a2503c4e");
+
+    /* Example from RFC8439 section 2.4.2. */
+    TestChaCha20("4c616469657320616e642047656e746c656d656e206f662074686520636c6173"
+                 "73206f66202739393a204966204920636f756c64206f6666657220796f75206f"
+                 "6e6c79206f6e652074697020666f7220746865206675747572652c2073756e73"
+                 "637265656e20776f756c642062652069742e",
+                 "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+                 {0, 0x4a000000}, 1,
+                 "6e2e359a2568f98041ba0728dd0d6981e97e7aec1d4360c20a27afccfd9fae0b"
+                 "f91b65c5524733ab8f593dabcd62b3571639d624e65152ab8f530c359f0861d8"
+                 "07ca0dbf500d6a6156a38e088a22b65e52bc514d16ccf806818ce91ab7793736"
+                 "5af90bbf74a35be6b40b8eedf2785e42874d");
+
+    // RFC 7539/8439 A.1 Test Vector #1:
+    TestChaCha20("",
+                 "0000000000000000000000000000000000000000000000000000000000000000",
+                 {0, 0}, 0,
+                 "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7"
+                 "da41597c5157488d7724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586");
+
+    // RFC 7539/8439 A.1 Test Vector #2:
+    TestChaCha20("",
+                 "0000000000000000000000000000000000000000000000000000000000000000",
+                 {0, 0}, 1,
+                 "9f07e7be5551387a98ba977c732d080dcb0f29a048e3656912c6533e32ee7aed"
+                 "29b721769ce64e43d57133b074d839d531ed1f28510afb45ace10a1f4b794d6f");
+
+    // RFC 7539/8439 A.1 Test Vector #3:
+    TestChaCha20("",
+                 "0000000000000000000000000000000000000000000000000000000000000001",
+                 {0, 0}, 1,
+                 "3aeb5224ecf849929b9d828db1ced4dd832025e8018b8160b82284f3c949aa5a"
+                 "8eca00bbb4a73bdad192b5c42f73f2fd4e273644c8b36125a64addeb006c13a0");
+
+    // RFC 7539/8439 A.1 Test Vector #4:
+    TestChaCha20("",
+                 "00ff000000000000000000000000000000000000000000000000000000000000",
+                 {0, 0}, 2,
+                 "72d54dfbf12ec44b362692df94137f328fea8da73990265ec1bbbea1ae9af0ca"
+                 "13b25aa26cb4a648cb9b9d1be65b2c0924a66c54d545ec1b7374f4872e99f096");
+
+    // RFC 7539/8439 A.1 Test Vector #5:
+    TestChaCha20("",
+                 "0000000000000000000000000000000000000000000000000000000000000000",
+                 {0, 0x200000000000000}, 0,
+                 "c2c64d378cd536374ae204b9ef933fcd1a8b2288b3dfa49672ab765b54ee27c7"
+                 "8a970e0e955c14f3a88e741b97c286f75f8fc299e8148362fa198a39531bed6d");
+
+    // RFC 7539/8439 A.2 Test Vector #1:
+    TestChaCha20("0000000000000000000000000000000000000000000000000000000000000000"
+                 "0000000000000000000000000000000000000000000000000000000000000000",
+                 "0000000000000000000000000000000000000000000000000000000000000000",
+                 {0, 0}, 0,
+                 "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7"
+                 "da41597c5157488d7724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586");
+
+    // RFC 7539/8439 A.2 Test Vector #2:
+    TestChaCha20("416e79207375626d697373696f6e20746f20746865204945544620696e74656e"
+                 "6465642062792074686520436f6e7472696275746f7220666f72207075626c69"
+                 "636174696f6e20617320616c6c206f722070617274206f6620616e2049455446"
+                 "20496e7465726e65742d4472616674206f722052464320616e6420616e792073"
+                 "746174656d656e74206d6164652077697468696e2074686520636f6e74657874"
+                 "206f6620616e204945544620616374697669747920697320636f6e7369646572"
+                 "656420616e20224945544620436f6e747269627574696f6e222e205375636820"
+                 "73746174656d656e747320696e636c756465206f72616c2073746174656d656e"
+                 "747320696e20494554462073657373696f6e732c2061732077656c6c20617320"
+                 "7772697474656e20616e6420656c656374726f6e696320636f6d6d756e696361"
+                 "74696f6e73206d61646520617420616e792074696d65206f7220706c6163652c"
+                 "207768696368206172652061646472657373656420746f",
+                 "0000000000000000000000000000000000000000000000000000000000000001",
+                 {0, 0x200000000000000}, 1,
+                 "a3fbf07df3fa2fde4f376ca23e82737041605d9f4f4f57bd8cff2c1d4b7955ec"
+                 "2a97948bd3722915c8f3d337f7d370050e9e96d647b7c39f56e031ca5eb6250d"
+                 "4042e02785ececfa4b4bb5e8ead0440e20b6e8db09d881a7c6132f420e527950"
+                 "42bdfa7773d8a9051447b3291ce1411c680465552aa6c405b7764d5e87bea85a"
+                 "d00f8449ed8f72d0d662ab052691ca66424bc86d2df80ea41f43abf937d3259d"
+                 "c4b2d0dfb48a6c9139ddd7f76966e928e635553ba76c5c879d7b35d49eb2e62b"
+                 "0871cdac638939e25e8a1e0ef9d5280fa8ca328b351c3c765989cbcf3daa8b6c"
+                 "cc3aaf9f3979c92b3720fc88dc95ed84a1be059c6499b9fda236e7e818b04b0b"
+                 "c39c1e876b193bfe5569753f88128cc08aaa9b63d1a16f80ef2554d7189c411f"
+                 "5869ca52c5b83fa36ff216b9c1d30062bebcfd2dc5bce0911934fda79a86f6e6"
+                 "98ced759c3ff9b6477338f3da4f9cd8514ea9982ccafb341b2384dd902f3d1ab"
+                 "7ac61dd29c6f21ba5b862f3730e37cfdc4fd806c22f221");
+
+    // RFC 7539/8439 A.2 Test Vector #3:
+    TestChaCha20("2754776173206272696c6c69672c20616e642074686520736c6974687920746f"
+                 "7665730a446964206779726520616e642067696d626c6520696e207468652077"
+                 "6162653a0a416c6c206d696d737920776572652074686520626f726f676f7665"
+                 "732c0a416e6420746865206d6f6d65207261746873206f757467726162652e",
+                 "1c9240a5eb55d38af333888604f6b5f0473917c1402b80099dca5cbc207075c0",
+                 {0, 0x200000000000000}, 42,
+                 "62e6347f95ed87a45ffae7426f27a1df5fb69110044c0d73118effa95b01e5cf"
+                 "166d3df2d721caf9b21e5fb14c616871fd84c54f9d65b283196c7fe4f60553eb"
+                 "f39c6402c42234e32a356b3e764312a61a5532055716ead6962568f87d3f3f77"
+                 "04c6a8d1bcd1bf4d50d6154b6da731b187b58dfd728afa36757a797ac188d1");
+
+    // RFC 7539/8439 A.4 Test Vector #1:
+    TestChaCha20("",
+                 "0000000000000000000000000000000000000000000000000000000000000000",
+                 {0, 0}, 0,
+                 "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7");
+
+    // RFC 7539/8439 A.4 Test Vector #2:
+    TestChaCha20("",
+                 "0000000000000000000000000000000000000000000000000000000000000001",
+                 {0, 0x200000000000000}, 0,
+                 "ecfa254f845f647473d3cb140da9e87606cb33066c447b87bc2666dde3fbb739");
+
+    // RFC 7539/8439 A.4 Test Vector #3:
+    TestChaCha20("",
+                 "1c9240a5eb55d38af333888604f6b5f0473917c1402b80099dca5cbc207075c0",
+                 {0, 0x200000000000000}, 0,
+                 "965e3bc6f9ec7ed9560808f4d229f94b137ff275ca9b3fcbdd59deaad23310ae");
 
     // test encryption
     TestChaCha20("4c616469657320616e642047656e746c656d656e206f662074686520636c617373206f66202739393a204966204920636f756"
                  "c64206f6666657220796f75206f6e6c79206f6e652074697020666f7220746865206675747572652c2073756e73637265656e"
                  "20776f756c642062652069742e",
-                 "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", 0x4a000000UL, 1,
+                 "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", {0, 0x4a000000UL}, 1,
                  "6e2e359a2568f98041ba0728dd0d6981e97e7aec1d4360c20a27afccfd9fae0bf91b65c5524733ab8f593dabcd62b3571639d"
                  "624e65152ab8f530c359f0861d807ca0dbf500d6a6156a38e088a22b65e52bc514d16ccf806818ce91ab77937365af90bbf74"
                  "a35be6b40b8eedf2785e42874d"
                  );
 
     // test keystream output
-    TestChaCha20("", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", 0x4a000000UL, 1,
+    TestChaCha20("", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", {0, 0x4a000000UL}, 1,
                  "224f51f3401bd9e12fde276fb8631ded8c131f823d2c06e27e4fcaec9ef3cf788a3b0aa372600a92b57974cded2b9334794cb"
                  "a40c63e34cdea212c4cf07d41b769a6749f3f630f4122cafe28ec4dc47e26d4346d70b98c73f3e9c53ac40c5945398b6eda1a"
                  "832c89c167eacd901d7e2bf363");
 
     // Test vectors from https://tools.ietf.org/html/draft-agl-tls-chacha20poly1305-04#section-7
-    TestChaCha20("", "0000000000000000000000000000000000000000000000000000000000000000", 0, 0,
-                 "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7da41597c5157488d7724e03fb8d84a376a43b"
-                 "8f41518a11cc387b669b2ee6586");
-    TestChaCha20("", "0000000000000000000000000000000000000000000000000000000000000001", 0, 0,
-                 "4540f05a9f1fb296d7736e7b208e3c96eb4fe1834688d2604f450952ed432d41bbe2a0b6ea7566d2a5d1e7e20d42af2c53d79"
-                 "2b1c43fea817e9ad275ae546963");
-    TestChaCha20("", "0000000000000000000000000000000000000000000000000000000000000000", 0x0100000000000000ULL, 0,
-                 "de9cba7bf3d69ef5e786dc63973f653a0b49e015adbff7134fcb7df137821031e85a050278a7084527214f73efc7fa5b52770"
-                 "62eb7a0433e445f41e3");
-    TestChaCha20("", "0000000000000000000000000000000000000000000000000000000000000000", 1, 0,
-                 "ef3fdfd6c61578fbf5cf35bd3dd33b8009631634d21e42ac33960bd138e50d32111e4caf237ee53ca8ad6426194a88545ddc4"
-                 "97a0b466e7d6bbdb0041b2f586b");
-    TestChaCha20("", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", 0x0706050403020100ULL, 0,
-                 "f798a189f195e66982105ffb640bb7757f579da31602fc93ec01ac56f85ac3c134a4547b733b46413042c9440049176905d3b"
-                 "e59ea1c53f15916155c2be8241a38008b9a26bc35941e2444177c8ade6689de95264986d95889fb60e84629c9bd9a5acb1cc1"
-                 "18be563eb9b3a4a472f82e09a7e778492b562ef7130e88dfe031c79db9d4f7c7a899151b9a475032b63fc385245fe054e3dd5"
-                 "a97a5f576fe064025d3ce042c566ab2c507b138db853e3d6959660996546cc9c4a6eafdc777c040d70eaf46f76dad3979e5c5"
-                 "360c3317166a1c894c94a371876a94df7628fe4eaaf2ccb27d5aaae0ad7ad0f9d4b6ad3b54098746d4524d38407a6deb3ab78"
-                 "fab78c9");
+    // The first one is identical to the above one from the RFC8439 A.1 vectors, but repeated here
+    // for completeness.
+    TestChaCha20("",
+                 "0000000000000000000000000000000000000000000000000000000000000000",
+                 {0, 0}, 0,
+                 "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7"
+                 "da41597c5157488d7724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586");
+    TestChaCha20("",
+                 "0000000000000000000000000000000000000000000000000000000000000001",
+                 {0, 0}, 0,
+                 "4540f05a9f1fb296d7736e7b208e3c96eb4fe1834688d2604f450952ed432d41"
+                 "bbe2a0b6ea7566d2a5d1e7e20d42af2c53d792b1c43fea817e9ad275ae546963");
+    TestChaCha20("",
+                 "0000000000000000000000000000000000000000000000000000000000000000",
+                 {0, 0x0100000000000000ULL}, 0,
+                 "de9cba7bf3d69ef5e786dc63973f653a0b49e015adbff7134fcb7df137821031"
+                 "e85a050278a7084527214f73efc7fa5b5277062eb7a0433e445f41e3");
+    TestChaCha20("",
+                 "0000000000000000000000000000000000000000000000000000000000000000",
+                 {0, 1}, 0,
+                 "ef3fdfd6c61578fbf5cf35bd3dd33b8009631634d21e42ac33960bd138e50d32"
+                 "111e4caf237ee53ca8ad6426194a88545ddc497a0b466e7d6bbdb0041b2f586b");
+    TestChaCha20("",
+                 "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+                 {0, 0x0706050403020100ULL}, 0,
+                 "f798a189f195e66982105ffb640bb7757f579da31602fc93ec01ac56f85ac3c1"
+                 "34a4547b733b46413042c9440049176905d3be59ea1c53f15916155c2be8241a"
+                 "38008b9a26bc35941e2444177c8ade6689de95264986d95889fb60e84629c9bd"
+                 "9a5acb1cc118be563eb9b3a4a472f82e09a7e778492b562ef7130e88dfe031c7"
+                 "9db9d4f7c7a899151b9a475032b63fc385245fe054e3dd5a97a5f576fe064025"
+                 "d3ce042c566ab2c507b138db853e3d6959660996546cc9c4a6eafdc777c040d7"
+                 "0eaf46f76dad3979e5c5360c3317166a1c894c94a371876a94df7628fe4eaaf2"
+                 "ccb27d5aaae0ad7ad0f9d4b6ad3b54098746d4524d38407a6deb3ab78fab78c9");
+
+    // Test overflow of 32-bit block counter, should increment the first 32-bit
+    // part of the nonce to retain compatibility with >256 GiB output.
+    // The test data was generated with an implementation that uses a 64-bit
+    // counter and a 64-bit initialization vector (PyCryptodome's ChaCha20 class
+    // with 8 bytes nonce length).
+    TestChaCha20("",
+                 "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+                 {0, 0xdeadbeef12345678}, 0xffffffff,
+                 "2d292c880513397b91221c3a647cfb0765a4815894715f411e3df5e0dd0ba9df"
+                 "fd565dea5addbdb914208fde7950f23e0385f9a727143f6a6ac51d84b1c0fb3e"
+                 "2e3b00b63d6841a1cc6d1538b1d3a74bef1eb2f54c7b7281e36e484dba89b351"
+                 "c8f572617e61e342879f211b0e4c515df50ea9d0771518fad96cd0baee62deb6");
+
+    // Forward secure ChaCha20
+    TestFSChaCha20("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+                   "0000000000000000000000000000000000000000000000000000000000000000",
+                   256,
+                   "a93df4ef03011f3db95f60d996e1785df5de38fc39bfcb663a47bb5561928349");
+    TestFSChaCha20("01",
+                   "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+                   5,
+                   "ea");
+    TestFSChaCha20("e93fdb5c762804b9a706816aca31e35b11d2aa3080108ef46a5b1f1508819c0a",
+                   "8ec4c3ccdaea336bdeb245636970be01266509b33f3d2642504eaf412206207a",
+                   4096,
+                   "8bfaa4eacff308fdb4a94a5ff25bd9d0c1f84b77f81239f67ff39d6e1ac280c9");
+}
+
+BOOST_AUTO_TEST_CASE(chacha20_midblock)
+{
+    auto key = "0000000000000000000000000000000000000000000000000000000000000000"_hex;
+    ChaCha20 c20{key};
+    // get one block of keystream
+    std::byte block[64];
+    c20.Keystream(block);
+    std::byte b1[5], b2[7], b3[52];
+    c20 = ChaCha20{key};
+    c20.Keystream(b1);
+    c20.Keystream(b2);
+    c20.Keystream(b3);
+
+    BOOST_CHECK(std::ranges::equal(Span{block}.first(5), b1));
+    BOOST_CHECK(std::ranges::equal(Span{block}.subspan(5, 7), b2));
+    BOOST_CHECK(std::ranges::equal(Span{block}.last(52), b3));
 }
 
 BOOST_AUTO_TEST_CASE(poly1305_testvector)
@@ -566,16 +916,148 @@ BOOST_AUTO_TEST_CASE(poly1305_testvector)
     TestPoly1305("e33594d7505e43b900000000000000003394d7505e4379cd010000000000000000000000000000000000000000000000",
                  "0100000000000000040000000000000000000000000000000000000000000000",
                  "13000000000000000000000000000000");
+
+    // Tests from https://github.com/floodyberry/poly1305-donna/blob/master/poly1305-donna.c
+    TestPoly1305("8e993b9f48681273c29650ba32fc76ce48332ea7164d96a4476fb8c531a1186a"
+                 "c0dfc17c98dce87b4da7f011ec48c97271d2c20f9b928fe2270d6fb863d51738"
+                 "b48eeee314a7cc8ab932164548e526ae90224368517acfeabd6bb3732bc0e9da"
+                 "99832b61ca01b6de56244a9e88d5f9b37973f622a43d14a6599b1f654cb45a74"
+                 "e355a5",
+                 "eea6a7251c1e72916d11c2cb214d3c252539121d8e234e652d651fa4c8cff880",
+                 "f3ffc7703f9400e52a7dfb4b3d3305d9");
+    {
+        // mac of the macs of messages of length 0 to 256, where the key and messages have all
+        // their values set to the length.
+        auto total_key = "01020304050607fffefdfcfbfaf9ffffffffffffffffffffffffffff00000000"_hex;
+        Poly1305 total_ctx(total_key);
+        for (unsigned i = 0; i < 256; ++i) {
+            std::vector<std::byte> key(32, std::byte{uint8_t(i)});
+            std::vector<std::byte> msg(i, std::byte{uint8_t(i)});
+            std::array<std::byte, Poly1305::TAGLEN> tag;
+            Poly1305{key}.Update(msg).Finalize(tag);
+            total_ctx.Update(tag);
+        }
+        std::vector<std::byte> total_tag(Poly1305::TAGLEN);
+        total_ctx.Finalize(total_tag);
+        BOOST_CHECK_EQUAL(HexStr(total_tag), "64afe2e8d6ad7bbdd287f97c44623d39");
+    }
+
+    // Tests with sparse messages and random keys.
+    TestPoly1305("000000000000000000000094000000000000b07c4300000000002c002600d500"
+                 "00000000000000000000000000bc58000000000000000000c9000000dd000000"
+                 "00000000000000d34c000000000000000000000000f9009100000000000000c2"
+                 "4b0000e900000000000000000000000000000000000e00000027000074000000"
+                 "0000000003000000000000f1000000000000dce2000000000000003900000000"
+                 "0000000000000000000000000000000000000000000000520000000000000000"
+                 "000000000000000000000000009500000000000000000000000000cf00826700"
+                 "000000a900000000000000000000000000000000000000000079000000000000"
+                 "0000de0000004c000000000033000000000000000000000000002800aa000000"
+                 "00003300860000e000000000",
+                 "6e543496db3cf677592989891ab021f58390feb84fb419fbc7bb516a60bfa302",
+                 "7ea80968354d40d9d790b45310caf7f3");
+    TestPoly1305("0000005900000000c40000002f00000000000000000000000000000029690000"
+                 "0000e8000037000000000000000000000000000b000000000000000000000000"
+                 "000000000000000000000000001800006e0000000000a4000000000000000000"
+                 "00000000000000004d00000000000000b0000000000000000000005a00000000"
+                 "0000000000b7c300000000000000540000000000000000000000000a00000000"
+                 "00005b0000000000000000000000000000000000002d00e70000000000000000"
+                 "000000000000003400006800d700000000000000000000360000000000000000"
+                 "00eb000000000000000000000000000000000000000000000000000028000000"
+                 "37000000000000000000000000000000000000000000000000000000008f0000"
+                 "000000000000000000000000",
+                 "f0b659a4f3143d8a1e1dacb9a409fe7e7cd501dfb58b16a2623046c5d337922a",
+                 "0e410fa9d7a40ac582e77546be9a72bb");
+}
+
+BOOST_AUTO_TEST_CASE(chacha20poly1305_testvectors)
+{
+    // Note that in our implementation, the authentication is suffixed to the ciphertext.
+    // The RFC test vectors specify them separately.
+
+    // RFC 8439 Example from section 2.8.2
+    TestChaCha20Poly1305("4c616469657320616e642047656e746c656d656e206f662074686520636c6173"
+                         "73206f66202739393a204966204920636f756c64206f6666657220796f75206f"
+                         "6e6c79206f6e652074697020666f7220746865206675747572652c2073756e73"
+                         "637265656e20776f756c642062652069742e",
+                         "50515253c0c1c2c3c4c5c6c7",
+                         "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+                         {7, 0x4746454443424140},
+                         "d31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d6"
+                         "3dbea45e8ca9671282fafb69da92728b1a71de0a9e060b2905d6a5b67ecd3b36"
+                         "92ddbd7f2d778b8c9803aee328091b58fab324e4fad675945585808b4831d7bc"
+                         "3ff4def08e4b7a9de576d26586cec64b61161ae10b594f09e26a7e902ecbd060"
+                         "0691");
+
+    // RFC 8439 Test vector A.5
+    TestChaCha20Poly1305("496e7465726e65742d4472616674732061726520647261667420646f63756d65"
+                         "6e74732076616c696420666f722061206d6178696d756d206f6620736978206d"
+                         "6f6e74687320616e64206d617920626520757064617465642c207265706c6163"
+                         "65642c206f72206f62736f6c65746564206279206f7468657220646f63756d65"
+                         "6e747320617420616e792074696d652e20497420697320696e617070726f7072"
+                         "6961746520746f2075736520496e7465726e65742d4472616674732061732072"
+                         "65666572656e6365206d6174657269616c206f7220746f206369746520746865"
+                         "6d206f74686572207468616e206173202fe2809c776f726b20696e2070726f67"
+                         "726573732e2fe2809d",
+                         "f33388860000000000004e91",
+                         "1c9240a5eb55d38af333888604f6b5f0473917c1402b80099dca5cbc207075c0",
+                         {0, 0x0807060504030201},
+                         "64a0861575861af460f062c79be643bd5e805cfd345cf389f108670ac76c8cb2"
+                         "4c6cfc18755d43eea09ee94e382d26b0bdb7b73c321b0100d4f03b7f355894cf"
+                         "332f830e710b97ce98c8a84abd0b948114ad176e008d33bd60f982b1ff37c855"
+                         "9797a06ef4f0ef61c186324e2b3506383606907b6a7c02b0f9f6157b53c867e4"
+                         "b9166c767b804d46a59b5216cde7a4e99040c5a40433225ee282a1b0a06c523e"
+                         "af4534d7f83fa1155b0047718cbc546a0d072b04b3564eea1b422273f548271a"
+                         "0bb2316053fa76991955ebd63159434ecebb4e466dae5a1073a6727627097a10"
+                         "49e617d91d361094fa68f0ff77987130305beaba2eda04df997b714d6c6f2c29"
+                         "a6ad5cb4022b02709beead9d67890cbb22392336fea1851f38");
+
+    // Test vectors exercising aad and plaintext which are multiples of 16 bytes.
+    TestChaCha20Poly1305("8d2d6a8befd9716fab35819eaac83b33269afb9f1a00fddf66095a6c0cd91951"
+                         "a6b7ad3db580be0674c3f0b55f618e34",
+                         "",
+                         "72ddc73f07101282bbbcf853b9012a9f9695fc5d36b303a97fd0845d0314e0c3",
+                         {0x3432b75f, 0xb3585537eb7f4024},
+                         "f760b8224fb2a317b1b07875092606131232a5b86ae142df5df1c846a7f6341a"
+                         "f2564483dd77f836be45e6230808ffe402a6f0a3e8be074b3d1f4ea8a7b09451");
+    TestChaCha20Poly1305("",
+                         "36970d8a704c065de16250c18033de5a400520ac1b5842b24551e5823a3314f3"
+                         "946285171e04a81ebfbe3566e312e74ab80e94c7dd2ff4e10de0098a58d0f503",
+                         "77adda51d6730b9ad6c995658cbd49f581b2547e7c0c08fcc24ceec797461021",
+                         {0x1f90da88, 0x75dafa3ef84471a4},
+                         "aaae5bb81e8407c94b2ae86ae0c7efbe");
+
+    // FSChaCha20Poly1305 tests.
+    TestFSChaCha20Poly1305("d6a4cb04ef0f7c09c1866ed29dc24d820e75b0491032a51b4c3366f9ca35c19e"
+                           "a3047ec6be9d45f9637b63e1cf9eb4c2523a5aab7b851ebeba87199db0e839cf"
+                           "0d5c25e50168306377aedbe9089fd2463ded88b83211cf51b73b150608cc7a60"
+                           "0d0f11b9a742948482e1b109d8faf15b450aa7322e892fa2208c6691e3fecf4c"
+                           "711191b14d75a72147",
+                           "786cb9b6ebf44288974cf0",
+                           "5c9e1c3951a74fba66708bf9d2c217571684556b6a6a3573bff2847d38612654",
+                           500,
+                           "9dcebbd3281ea3dd8e9a1ef7d55a97abd6743e56ebc0c190cb2c4e14160b385e"
+                           "0bf508dddf754bd02c7c208447c131ce23e47a4a14dfaf5dd8bc601323950f75"
+                           "4e05d46e9232f83fc5120fbbef6f5347a826ec79a93820718d4ec7a2b7cfaaa4"
+                           "4b21e16d726448b62f803811aff4f6d827ed78e738ce8a507b81a8ae13131192"
+                           "8039213de18a5120dc9b7370baca878f50ff254418de3da50c");
+    TestFSChaCha20Poly1305("8349b7a2690b63d01204800c288ff1138a1d473c832c90ea8b3fc102d0bb3adc"
+                           "44261b247c7c3d6760bfbe979d061c305f46d94c0582ac3099f0bf249f8cb234",
+                           "",
+                           "3bd2093fcbcb0d034d8c569583c5425c1a53171ea299f8cc3bbf9ae3530adfce",
+                           60000,
+                           "30a6757ff8439b975363f166a0fa0e36722ab35936abd704297948f45083f4d4"
+                           "99433137ce931f7fca28a0acd3bc30f57b550acbc21cbd45bbef0739d9caf30c"
+                           "14b94829deb27f0b1923a2af704ae5d6");
 }
 
 BOOST_AUTO_TEST_CASE(hkdf_hmac_sha256_l32_tests)
 {
     // Use rfc5869 test vectors but truncated to 32 bytes (our implementation only support length 32)
     TestHKDF_SHA256_32(
-                /* IKM */ "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
-                /* salt */ "000102030405060708090a0b0c",
-                /* info */ "f0f1f2f3f4f5f6f7f8f9",
-                /* expected OKM */ "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf");
+                /*ikm_hex=*/"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+                /*salt_hex=*/"000102030405060708090a0b0c",
+                /*info_hex=*/"f0f1f2f3f4f5f6f7f8f9",
+                /*okm_check_hex=*/"3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf");
     TestHKDF_SHA256_32(
                 "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
                 "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
@@ -588,160 +1070,13 @@ BOOST_AUTO_TEST_CASE(hkdf_hmac_sha256_l32_tests)
                 "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d");
 }
 
-static void TestChaCha20Poly1305AEAD(bool must_succeed, unsigned int expected_aad_length, const std::string& hex_m, const std::string& hex_k1, const std::string& hex_k2, const std::string& hex_aad_keystream, const std::string& hex_encrypted_message, const std::string& hex_encrypted_message_seq_999)
-{
-    // we need two sequence numbers, one for the payload cipher instance...
-    uint32_t seqnr_payload = 0;
-    // ... and one for the AAD (length) cipher instance
-    uint32_t seqnr_aad = 0;
-    // we need to keep track of the position in the AAD cipher instance
-    // keystream since we use the same 64byte output 21 times
-    // (21 times 3 bytes length < 64)
-    int aad_pos = 0;
-
-    std::vector<unsigned char> aead_K_1 = ParseHex(hex_k1);
-    std::vector<unsigned char> aead_K_2 = ParseHex(hex_k2);
-    std::vector<unsigned char> plaintext_buf = ParseHex(hex_m);
-    std::vector<unsigned char> expected_aad_keystream = ParseHex(hex_aad_keystream);
-    std::vector<unsigned char> expected_ciphertext_and_mac = ParseHex(hex_encrypted_message);
-    std::vector<unsigned char> expected_ciphertext_and_mac_sequence999 = ParseHex(hex_encrypted_message_seq_999);
-
-    std::vector<unsigned char> ciphertext_buf(plaintext_buf.size() + POLY1305_TAGLEN, 0);
-    std::vector<unsigned char> plaintext_buf_new(plaintext_buf.size(), 0);
-    std::vector<unsigned char> cmp_ctx_buffer(64);
-    uint32_t out_len = 0;
-
-    // create the AEAD instance
-    ChaCha20Poly1305AEAD aead(aead_K_1.data(), aead_K_1.size(), aead_K_2.data(), aead_K_2.size());
-
-    // create a chacha20 instance to compare against
-    ChaCha20 cmp_ctx(aead_K_2.data(), 32);
-
-    // encipher
-    bool res = aead.Crypt(seqnr_payload, seqnr_aad, aad_pos, ciphertext_buf.data(), ciphertext_buf.size(), plaintext_buf.data(), plaintext_buf.size(), true);
-    // make sure the operation succeeded if expected to succeed
-    BOOST_CHECK_EQUAL(res, must_succeed);
-    if (!res) return;
-
-    // verify ciphertext & mac against the test vector
-    BOOST_CHECK_EQUAL(expected_ciphertext_and_mac.size(), ciphertext_buf.size());
-    BOOST_CHECK(memcmp(ciphertext_buf.data(), expected_ciphertext_and_mac.data(), ciphertext_buf.size()) == 0);
-
-    // manually construct the AAD keystream
-    cmp_ctx.SetIV(seqnr_aad);
-    cmp_ctx.Seek(0);
-    cmp_ctx.Keystream(cmp_ctx_buffer.data(), 64);
-    BOOST_CHECK(memcmp(expected_aad_keystream.data(), cmp_ctx_buffer.data(), expected_aad_keystream.size()) == 0);
-    // crypt the 3 length bytes and compare the length
-    uint32_t len_cmp = 0;
-    len_cmp = (ciphertext_buf[0] ^ cmp_ctx_buffer[aad_pos + 0]) |
-              (ciphertext_buf[1] ^ cmp_ctx_buffer[aad_pos + 1]) << 8 |
-              (ciphertext_buf[2] ^ cmp_ctx_buffer[aad_pos + 2]) << 16;
-    BOOST_CHECK_EQUAL(len_cmp, expected_aad_length);
-
-    // encrypt / decrypt 1000 packets
-    for (size_t i = 0; i < 1000; ++i) {
-        res = aead.Crypt(seqnr_payload, seqnr_aad, aad_pos, ciphertext_buf.data(), ciphertext_buf.size(), plaintext_buf.data(), plaintext_buf.size(), true);
-        BOOST_CHECK(res);
-        BOOST_CHECK(aead.GetLength(&out_len, seqnr_aad, aad_pos, ciphertext_buf.data()));
-        BOOST_CHECK_EQUAL(out_len, expected_aad_length);
-        res = aead.Crypt(seqnr_payload, seqnr_aad, aad_pos, plaintext_buf_new.data(), plaintext_buf_new.size(), ciphertext_buf.data(), ciphertext_buf.size(), false);
-        BOOST_CHECK(res);
-
-        // make sure we repetitive get the same plaintext
-        BOOST_CHECK(memcmp(plaintext_buf.data(), plaintext_buf_new.data(), plaintext_buf.size()) == 0);
-
-        // compare sequence number 999 against the test vector
-        if (seqnr_payload == 999) {
-            BOOST_CHECK(memcmp(ciphertext_buf.data(), expected_ciphertext_and_mac_sequence999.data(), expected_ciphertext_and_mac_sequence999.size()) == 0);
-        }
-        // set nonce and block counter, output the keystream
-        cmp_ctx.SetIV(seqnr_aad);
-        cmp_ctx.Seek(0);
-        cmp_ctx.Keystream(cmp_ctx_buffer.data(), 64);
-
-        // crypt the 3 length bytes and compare the length
-        len_cmp = 0;
-        len_cmp = (ciphertext_buf[0] ^ cmp_ctx_buffer[aad_pos + 0]) |
-                  (ciphertext_buf[1] ^ cmp_ctx_buffer[aad_pos + 1]) << 8 |
-                  (ciphertext_buf[2] ^ cmp_ctx_buffer[aad_pos + 2]) << 16;
-        BOOST_CHECK_EQUAL(len_cmp, expected_aad_length);
-
-        // increment the sequence number(s)
-        // always increment the payload sequence number
-        // increment the AAD keystream position by its size (3)
-        // increment the AAD sequence number if we would hit the 64 byte limit
-        seqnr_payload++;
-        aad_pos += CHACHA20_POLY1305_AEAD_AAD_LEN;
-        if (aad_pos + CHACHA20_POLY1305_AEAD_AAD_LEN > CHACHA20_ROUND_OUTPUT) {
-            aad_pos = 0;
-            seqnr_aad++;
-        }
-    }
-}
-
-BOOST_AUTO_TEST_CASE(chacha20_poly1305_aead_testvector)
-{
-    /* test chacha20poly1305@bdtcoin AEAD */
-
-    // must fail with no message
-    TestChaCha20Poly1305AEAD(false, 0,
-        "",
-        "0000000000000000000000000000000000000000000000000000000000000000",
-        "0000000000000000000000000000000000000000000000000000000000000000", "", "", "");
-
-    TestChaCha20Poly1305AEAD(true, 0,
-        /* m  */ "0000000000000000000000000000000000000000000000000000000000000000",
-        /* k1 (payload) */ "0000000000000000000000000000000000000000000000000000000000000000",
-        /* k2 (AAD) */ "0000000000000000000000000000000000000000000000000000000000000000",
-        /* AAD keystream */ "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7da41597c5157488d7724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586",
-        /* encrypted message & MAC */ "76b8e09f07e7be5551387a98ba977c732d080dcb0f29a048e3656912c6533e32d2fc11829c1b6c1df1f551cd6131ff08",
-        /* encrypted message & MAC at sequence 999 */ "b0a03d5bd2855d60699e7d3a3133fa47be740fe4e4c1f967555e2d9271f31c3aaa7aa16ec62c5e24f040c08bb20c3598");
-    TestChaCha20Poly1305AEAD(true, 1,
-        "0100000000000000000000000000000000000000000000000000000000000000",
-        "0000000000000000000000000000000000000000000000000000000000000000",
-        "0000000000000000000000000000000000000000000000000000000000000000",
-        "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7da41597c5157488d7724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586",
-        "77b8e09f07e7be5551387a98ba977c732d080dcb0f29a048e3656912c6533e32baf0c85b6dff8602b06cf52a6aefc62e",
-        "b1a03d5bd2855d60699e7d3a3133fa47be740fe4e4c1f967555e2d9271f31c3a8bd94d54b5ecabbc41ffbb0c90924080");
-    TestChaCha20Poly1305AEAD(true, 255,
-        "ff0000f195e66982105ffb640bb7757f579da31602fc93ec01ac56f85ac3c134a4547b733b46413042c9440049176905d3be59ea1c53f15916155c2be8241a38008b9a26bc35941e2444177c8ade6689de95264986d95889fb60e84629c9bd9a5acb1cc118be563eb9b3a4a472f82e09a7e778492b562ef7130e88dfe031c79db9d4f7c7a899151b9a475032b63fc385245fe054e3dd5a97a5f576fe064025d3ce042c566ab2c507b138db853e3d6959660996546cc9c4a6eafdc777c040d70eaf46f76dad3979e5c5360c3317166a1c894c94a371876a94df7628fe4eaaf2ccb27d5aaae0ad7ad0f9d4b6ad3b54098746d4524d38407a6deb3ab78fab78c9",
-        "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
-        "ff0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
-        "c640c1711e3ee904ac35c57ab9791c8a1c408603a90b77a83b54f6c844cb4b06d94e7fc6c800e165acd66147e80ec45a567f6ce66d05ec0cae679dceeb890017",
-        "3940c1e92da4582ff6f92a776aeb14d014d384eeb30f660dacf70a14a23fd31e91212701334e2ce1acf5199dc84f4d61ddbe6571bca5af874b4c9226c26e650995d157644e1848b96ed6c2102d5489a050e71d29a5a66ece11de5fb5c9558d54da28fe45b0bc4db4e5b88030bfc4a352b4b7068eccf656bae7ad6a35615315fc7c49d4200388d5eca67c2e822e069336c69b40db67e0f3c81209c50f3216a4b89fb3ae1b984b7851a2ec6f68ab12b101ab120e1ea7313bb93b5a0f71185c7fea017ddb92769861c29dba4fbc432280d5dff21b36d1c4c790128b22699950bb18bf74c448cdfe547d8ed4f657d8005fdc0cd7a050c2d46050a44c4376355858981fbe8b184288276e7a93eabc899c4a",
-        "f039c6689eaeef0456685200feaab9d54bbd9acde4410a3b6f4321296f4a8ca2604b49727d8892c57e005d799b2a38e85e809f20146e08eec75169691c8d4f54a0d51a1e1c7b381e0474eb02f994be9415ef3ffcbd2343f0601e1f3b172a1d494f838824e4df570f8e3b0c04e27966e36c82abd352d07054ef7bd36b84c63f9369afe7ed79b94f953873006b920c3fa251a771de1b63da927058ade119aa898b8c97e42a606b2f6df1e2d957c22f7593c1e2002f4252f4c9ae4bf773499e5cfcfe14dfc1ede26508953f88553bf4a76a802f6a0068d59295b01503fd9a600067624203e880fdf53933b96e1f4d9eb3f4e363dd8165a278ff667a41ee42b9892b077cefff92b93441f7be74cf10e6cd");
-}
-
-BOOST_AUTO_TEST_CASE(countbits_tests)
-{
-    FastRandomContext ctx;
-    for (unsigned int i = 0; i <= 64; ++i) {
-        if (i == 0) {
-            // Check handling of zero.
-            BOOST_CHECK_EQUAL(CountBits(0), 0U);
-        } else if (i < 10) {
-            for (uint64_t j = (uint64_t)1 << (i - 1); (j >> i) == 0; ++j) {
-                // Exhaustively test up to 10 bits
-                BOOST_CHECK_EQUAL(CountBits(j), i);
-            }
-        } else {
-            for (int k = 0; k < 1000; k++) {
-                // Randomly test 1000 samples of each length above 10 bits.
-                uint64_t j = ((uint64_t)1) << (i - 1) | ctx.randbits(i - 1);
-                BOOST_CHECK_EQUAL(CountBits(j), i);
-            }
-        }
-    }
-}
-
 BOOST_AUTO_TEST_CASE(sha256d64)
 {
     for (int i = 0; i <= 32; ++i) {
         unsigned char in[64 * 32];
         unsigned char out1[32 * 32], out2[32 * 32];
         for (int j = 0; j < 64 * i; ++j) {
-            in[j] = InsecureRandBits(8);
+            in[j] = m_rng.randbits(8);
         }
         for (int j = 0; j < i; ++j) {
             CHash256().Write({in + 64 * j, 64}).Finalize({out1 + 32 * j, 32});
@@ -751,7 +1086,7 @@ BOOST_AUTO_TEST_CASE(sha256d64)
     }
 }
 
-static void TestSHA3_256(const std::string& input, const std::string& output)
+void CryptoTest::TestSHA3_256(const std::string& input, const std::string& output)
 {
     const auto in_bytes = ParseHex(input);
     const auto out_bytes = ParseHex(output);
@@ -765,11 +1100,11 @@ static void TestSHA3_256(const std::string& input, const std::string& output)
 
     // Reset and split randomly in 3
     sha.Reset();
-    int s1 = InsecureRandRange(in_bytes.size() + 1);
-    int s2 = InsecureRandRange(in_bytes.size() + 1 - s1);
+    int s1 = m_rng.randrange(in_bytes.size() + 1);
+    int s2 = m_rng.randrange(in_bytes.size() + 1 - s1);
     int s3 = in_bytes.size() - s1 - s2;
-    sha.Write(MakeSpan(in_bytes).first(s1)).Write(MakeSpan(in_bytes).subspan(s1, s2));
-    sha.Write(MakeSpan(in_bytes).last(s3)).Finalize(out);
+    sha.Write(Span{in_bytes}.first(s1)).Write(Span{in_bytes}.subspan(s1, s2));
+    sha.Write(Span{in_bytes}.last(s3)).Finalize(out);
     BOOST_CHECK(std::equal(std::begin(out_bytes), std::end(out_bytes), out));
 }
 
@@ -832,7 +1167,7 @@ BOOST_AUTO_TEST_CASE(sha3_256_tests)
     TestSHA3_256("94464e8fafd82f630e6aab9aa339d981db0a372dc5c1efb177305995ae2dc0", "ea7952ad759653cd47a18004ac2dbb9cf4a1e7bba8a530cf070570c711a634ea");
     TestSHA3_256("c178ce0f720a6d73c6cf1caa905ee724d5ba941c2e2628136e3aad7d853733ba", "64537b87892835ff0963ef9ad5145ab4cfce5d303a0cb0415b3b03f9d16e7d6b");
     TestSHA3_256("14365d3301150d7c5ba6bb8c1fc26e9dab218fc5d01c9ed528b72482aadee9c27bef667907797d55514468f68791f053daa2df598d7db7d54beea493bdcbb0c75c7b36ad84b9996dca96354190bd96d9d7fbe8ff54ffaf77c55eb92985da50825ee3b4179f5ec88b6fa60bb361d0caf9493494fe4d28ef843f0f498a2a9331b82a", "9b690531dee948a9c559a2e0efab2ec824151a9175f2730a030b748d07cbaa7f");
-    TestSHA3_256("4a757db93f6d4c6529211d70d5f8491799c0f73ae7f24bbd2138db2eaf2c63a85063b9f7adaa03fc348f275323247399e3ffdf9798859f9cf6693d29566ff7d50976c505ecb58e543c459b39acdf4ce4b5e80a682eaa7c1f1ce5fe4acb864ff91eb6892b23165735ea49626898b40ceeb78161f5d0ea4a103cb404d937f9d1dc362b", "1ac7cc7e2e8ea14fb1b90096f41265100712c5dd41519d78b2786cfb6355af72");
+    TestSHA3_256("4a757db93f6d4c6529211d70d5f8491799c0f73ae7f24bbd2138db2eaf2c63a85063b9f7adaa03fc348f275323248334e3ffdf9798859f9cf6693d29566ff7d50976c505ecb58e543c459b39acdf4ce4b5e80a682eaa7c1f1ce5fe4acb864ff91eb6892b23165735ea49626898b40ceeb78161f5d0ea4a103cb404d937f9d1dc362b", "1ac7cc7e2e8ea14fb1b90096f41265100712c5dd41519d78b2786cfb6355af72");
     TestSHA3_256("da11c39c77250f6264dda4b096341ff9c4cc2c900633b20ea1664bf32193f790a923112488f882450cf334819bbaca46ffb88eff0265aa803bc79ca42739e4347c6bff0bb9aa99780261ffe42be0d3b5135d03723338fb2776841a0b4bc26360f9ef769b34c2bec5ed2feb216e2fa30fa5c37430c0360ecbfba3af6fb6b8dedacbb95c", "c163cd43de224ac5c262ae39db746cfcad66074ebaec4a6da23d86b310520f21");
     TestSHA3_256("3341ca020d4835838b0d6c8f93aaaebb7af60730d208c85283f6369f1ee27fd96d38f2674f316ef9c29c1b6b42dd59ec5236f65f5845a401adceaa4cf5bbd91cac61c21102052634e99faedd6cdddcd4426b42b6a372f29a5a5f35f51ce580bb1845a3c7cfcd447d269e8caeb9b320bb731f53fe5c969a65b12f40603a685afed86bfe53", "6c3e93f2b49f493344cc3eb1e9454f79363032beee2f7ea65b3d994b5cae438f");
     TestSHA3_256("989fc49594afc73405bacee4dbbe7135804f800368de39e2ea3bbec04e59c6c52752927ee3aa233ba0d8aab5410240f4c109d770c8c570777c928fce9a0bec9bc5156c821e204f0f14a9ab547e0319d3e758ae9e28eb2dbc3d9f7acf51bd52f41bf23aeb6d97b5780a35ba08b94965989744edd3b1d6d67ad26c68099af85f98d0f0e4fff9", "b10adeb6a9395a48788931d45a7b4e4f69300a76d8b716c40c614c3113a0f051");
@@ -855,6 +1190,94 @@ BOOST_AUTO_TEST_CASE(sha3_256_tests)
     TestSHA3_256("075997f09ab1980a3179d4da78c2e914a1ff48f34e5d3c2ab157281ef1841052d0b45a228c3cd6b5028efd2d190d76205e1fdf4cec83c9868fe504f429af1e7c5423267c48a7b5bc005f30a1980147a3fae5c100b95c7cb23d43af9f21d87311d9cc826598993e077015f59ebc476383bb7a78787d915c97039ab188a2a618f7a8d7f64542ba787e9dd7d48c4c87d2aaea068c1b00c9711b2812901673c11418096d0a850fb36b0acece56d311689dfeceb0835009adc427f6d2d6b05ed26f5a43b6478bc72c1f914a2202dbd393cb69b1a1e78162e55ca4b3030ac0298131a7a0d934c032cc9dfc5afa600c59b064d2d9013f15d1184278a8ccb5ad9d7563e666fe5a8c173cec34467ef9cf6d6671208ff714741fee7c8d1d565edf82570dffde4f3f584024142056d8548ad55df83d1babed06141114c95ac88dbea0ce35d950f16d8a732a1ea7d22dfaa75a3e0410c546523277261116a64bcbb2be83e55e040f6c8c79f911b301a8718cc4b19a81d5f0cb6312d87c5b4b079e23a61d247541cfc2c41a37f52b2c6e43a3db5dc47892d0e1feabcc5c808f2391791e45fb065159f99c1d8dd2f69baaf75267eb89dd460f1b6c0badb96cbbc8291cefa370fa7ad6997a4ca2b1fe968216032f02f29837d40215fa219c09161df074e1de8e37056e28c86d1f992a651e271dfc4b0592ad481c613fd00c3eea4b6deabb9f5aa63a4830ed49ab93624fa7b208966eccb1f293f4b9a46411f37d7928e4478dde2f608d3851a8efa68e9d45402bc5124fde4ddc0f83ef82b31019d0aacb4b5121bbc064c95c5292da97981f58f051df9502054bf728e9d4fb7e04787a0890922b30a3f66a760e3d3763855e82be017fa603630a33115a02f02386982001def905784f6ba307a598c6dbaf2946fe9e978acbaf3e4ba50ab49ae8e9582520fc2eb6790deafc77e04a8ee75da92d16f0d249403112c74bc09102b573e110ccb4d8461d249bfe2e85fc9770d606be6fbfd5ec4c30ac306d46412f736e5b696ccc9fbe4adea730955c55ea5c63678271d34b7bd6f6340e72626d290820eeb96a0d2d25ea81361a122ffe8e954cf4ff84f4dafcc5c9d3e7c2ddbdf95ed2c0862d3f2783e4566f450ec49e8b01d9d7bf11e92a7903f2b045c57ed8a65ccbfc5b1d2a38e020a57b38f2e4deea8a52354a7e7be4f977b8f5afe30f6738e955c8bda295064586b6827b245766b217fe39263572b0850965c7ae845611b8efb64c36244a39b9fed0ab970ee5ddeb8f2608dd9c963524a14050c9101d7f2d5537b24d0b0f7a45703c1e131656ec9edc12cdf71dae1cde2790b888ef2a589f03201f8bbfad71f0c4430477a6713ad2e50aaefa1f840cbb839e277389454517e0b9bd76a8ecc5c2e22b854c25ff708f9256d3700adeaec49eb2c4134638ee9bd649b4982f931ec3b23cc819fbc835ddcb3d65e04585aa005e13b7ef8fcafa36cc1a2c79ba6c26fc1dc0f6668f9432c578088cd33a41a778ac0b298fcac212edab724c9fb33d827409fd36bc4b2b0e4e81006fd050d94d3271e0427c61e9ddca599a3c9480cfdd33603cb1a196557281ce6a375fef17463893db293dba0704d4bfda25e08beadd4208c58ea0d8d9066448910b087fc13792fc44075a3fe42e13c5792f093a552aa8ebe0f63e7a807102d5bc145468a0cb469263035c5647049054c18199f7da6d6defd51105e2125c605e327aca137ca85e3f7f46ca69f92d5252f84418293f4e9afeeb067c79576e88cc3c64f3e61d76e1e9e2f72cdfc35261a9679f0c374d7436ff6cfe2ba71650810522fa554a4aded87ad23f0b206b1bc63f56bbff8bcc8849d99e209bd519a953f32c667aa8cd874ad99846ed94b92f88fe0dbf788c8431dc76ca9553692622077da2cdea666c1b3fee7c335da37737afccd3d400a23d18f5bd3784dbcd0663a38acb5a2beef03fc0a1c52ee0b56bda4493f2221e35bee59f962f16bc6781133204f032c7a6209dd3dabd6100325ec14e3ab0d05aadd03fdfe9f8737da15edab9d2598046f8c6dd8381aaf244821994d5a956073c733bcebf9edbc2a6e2676242dc4e6a2e4ba8a7d57ed509340d61fae2c82bee4dedc73b469e202cc0916250d40a1718090690a1d3b986cf593b019b7b7f79ae14843b2e7ccf0fd85218184f7844fbb35e934476841b056b3a75bf20abb6866e19a0614e6a1af0eee4de510535724363b6598cccf08a99066021653177559c57e5aaff4417670a98fe4bd41a137c384f98c0324c20ef8bc851a9b975e9440191ff08deb78c9fa6fc29c76b371a4a1fa08c30fc9d1b3323d897738495086bfd43ef24c650cfa80c42ecbadc0453c4437d1a11b467e93ca95fbae98d38dcb2da953e657fb7ea6c8493d08cf028c5d3eb0fcbcb205493f4658440719e076e02deb07332d093e4d256175ca56f4c785d5e7e26c6090a20429f70b3757daac54153bc16f5828dc6c1c9f5186e2117754be5f1b46b3631980d9e4a9a5c", "2e07737d271b9a0162eb2f4be1be54887118c462317eb6bd9f9baf1e24111848");
     TestSHA3_256("119a356f8c0790bbd5e9f3b4c5c4a70e97f462364c88cad04d5435645342b35484e94e12df61908fd95546f74859849b817ee92fbd242435c210b7b9bfbffb3f77f965faa1a9073e8feb5a380f673add8fde32208402fa680c8b3e41d187a15131f1028f9d86feaf3fd4b6e0e094d2ba0839c67267c9535173ec51645343ad74fcfaae389aa17cca3137e2588488531c36ba2b8e2f2238d8415c798a0b9a258f1e3cef605fa18977ad3d6707c3ecc5ea5f86ebdaa4b4b0e5bc023d1bc335138ae0de506cb52f2d9efa0ecc546468310cccc88ec08d28c3602e07257f41bb7e4d8a0956c564f3712761d199a931a39e69c5a69aa7b3257931dd92b91e4ed56fbf64e48bd334945cfa2aaf576df04614eb914899f7df54db4012cc8261b12bedcab69876feedbbf7009dcf8d076af89b797ad71217d75cf07514dc07ae34640055c74c9faf560f491f015ac3e167623cfbc67b8e7163e7c1b92debd06e9d28b049e0298f4c38395a40a0778162af2cfe5abe5b946c4d9a54f2a321660ab521068c4957cd3f5be0324cc04f50f209fdea7caaa0ac705c1fb30abfa550e844f509074afde1ee87adda29aa09b7f93e7d064ad2715ee5571ee6e7c9a01672124cc2a22b4354c3844759c1a6ce3fdf17555cac7df73334073ef3730939410fe6cf37463352ad241958b7fafbc66e0d592df48bf55ab2c33428e494c6995826892572d9ab52747b1085fcbef318cfe9cfacd4cd80c164fba584c1344ae7e321c4f77b44db6b322f2f7831f4d4ede7dc407b065c6754cf4424f9903adb4c6b675ded58700bc36da83fd95e84e76c404f7342921ef23d7d07772f5b8ec2f077601cae13448385b04e074f895574be61a831a87efd68a1f6aa67cf291847fa8f74cbe3b4a78ad780895183bc51c30ad2514255d4e013abc097bc8103c0b1933b0b303341836ae167c1e31dfe5f1b791cb06ef29cae398065343eecf06e4ae2048d1547c4bf69ccec5e86c45867c633c62f7d27dc51234b6debb5b9f80a5810716240c64443d0c098c80220d0520a5f5834369b9eb019325e23e88f237c24440bf27959caf7e7e4f1671fda710630255a2962f7e9b3625dc243a0177aacf6a758a68aa85dc3f56181a4a59a406c7fae5575c9e2c64248f520b5a5f904821661e2e43a5a058f445fd0e55b07476c4122d18033053b45112201e0bfdcc9e7cb9931155018ca431a0564930aca8defbca954b2680753a4060bec2cb668d2c15e77cba29589b5c7c07bc7177a8b1adb3a6968732f9213476fd96901514626fa17243af1d156cd037eea81d773f1f71a018d942b524b851794b300c7591ecd783ec8066ccb261bdf9b7a183dbda42b92593b614297dcb0fabcc23ae69797d0251b8ab57a4da2a544615216b01f4dbe2d8c9b5520c7ed9cd9312e9ec6d05a36e7f693d1821d727518169b03976394b9d1e1d7fa2daa25529d391eb5d0cf0f07a8160be2ee043d9345037c655c4f2023689f14d8d2072dd92c1dba056a5b5d4c4fc4196e25caab05b1701ec666ac9a04d90f7d7575a7ac3970252c18fd3bec0cc448e5ff8f3765d546a4a8ad1d41a9640c79375b80534b7b50989976f238654fefea981c9413130beae943a3e9d8f64ce9256d1259d1b2a6b3c02ca5af1a701db8f25a4e9c255dad8785172f323728c3585a45206ae988c283e30a2f9ea9b47f07a7521b0f36e9c504c14bd96027e8d24161e70f196576d8a74a5e9c26acda7cc452a90e550e625a49e50829db70de808c827c67d00c23ee073d4e72aeed891dd73b86acd6756e753e3975a80cdab1d521052caef6a5380f8b03023ba0326a6928aa127ffb33b51dcb05bbdd592d0ad9e8321e6ef2f95c401be6a37e634425689fe7750e2a0fe05ad89001502b309095ca517b2e2ed0388b9f2c59c45feb61222539d6e1ccd397344d23708aebacec10ada96a7711f173f7ff1e4b94fceec6a0a0ea5d814a4581b412063012ff6ac5527b8314d00326b68c2304a276a217fde9fa4034750a2e47e10f816870d12fc4641a27a1c16c35a953f32685f2b92cae0519848045765591c42ddc402dc7c6914d74dd38d2b5e7f35358cb1d91a9f681fde7fd6c7af5840663525ee1d04bf6d3156fed018c44043d95383d92dada3d1cd84af51d9bee814ec8675073e1c48632c5f59e257682542e1f7dc20b56b5c92a9e2cb2be30cb1512fb55fa1de99a3f5864ed3acc19d79e6ffb0da3b08ba0615157747d75c1f308fa0202a4086f34e9eafa3e071dfbacaca731d228aa0304cf390c0a9e6ad7ce22ade758965cfbfc4c9390d24e41a667447fc7b29821464ad98bc5d65dc7f9c42bd4b23e174015592ff92c905660a2722f9fc7973d3cdad848ef88bf02b1b03dea16699b71dc46b35bc4d96069a0753335ae38685d244918e30c5fb0d45283a1281c1659ea591573999d9c2acd2ca9141d55230d41011b70748b518e1cd2fa58ad8dc05fcbdf0bffaf2c7fd6cb2ac67bb13b8f6d31fad64ac113664223599dca411270955c95aec06518894dabc352d2b70984727437040d944da7b42e0ef560ac532de3e4a4891e8509c275b51ed780f8660b0354e12c21b3e11bcc88198980b5f7ff31ad342182d5a933373164dced3cfb2a081720d7eee676cb7378a3e19326a7ee67fd6c00521f9de37c66bcea814b6feb6a061b8cdcf7b4bd8f45d48602c5", "c26d0b064e409df64819cd7c1a3b8076f19815b9823adac4e3ce0b4d3a29de18");
     TestSHA3_256("72c57c359e10684d0517e46653a02d18d29eff803eb009e4d5eb9e95add9ad1a4ac1f38a70296f3a369a16985ca3c957de2084cdc9bdd8994eb59b8815e0debad4ec1f001feac089820db8becdaf896aaf95721e8674e5d476b43bd2b873a7d135cd685f545b438210f9319e4dcd55986c85303c1ddf18dc746fe63a409df0a998ed376eb683e16c09e6e9018504152b3e7628ef350659fb716e058a5263a18823d2f2f6ee6a8091945a48ae1c5cb1694cf2c1fe76ef9177953afe8899cfa2b7fe0603bfa3180937dadfb66fbbdd119bbf8063338aa4a699075a3bfdbae8db7e5211d0917e9665a702fc9b0a0a901d08bea97654162d82a9f05622b060b634244779c33427eb7a29353a5f48b07cbefa72f3622ac5900bef77b71d6b314296f304c8426f451f32049b1f6af156a9dab702e8907d3cd72bb2c50493f4d593e731b285b70c803b74825b3524cda3205a8897106615260ac93c01c5ec14f5b11127783989d1824527e99e04f6a340e827b559f24db9292fcdd354838f9339a5fa1d7f6b2087f04835828b13463dd40927866f16ae33ed501ec0e6c4e63948768c5aeea3e4f6754985954bea7d61088c44430204ef491b74a64bde1358cecb2cad28ee6a3de5b752ff6a051104d88478653339457ac45ba44cbb65f54d1969d047cda746931d5e6a8b48e211416aefd5729f3d60b56b54e7f85aa2f42de3cb69419240c24e67139a11790a709edef2ac52cf35dd0a08af45926ebe9761f498ff83bfe263d6897ee97943a4b982fe3404ef0b4a45e06113c60340e0664f14799bf59cb4b3934b465fabefd87155905ee5309ba41e9e402973311831ea600b16437f71df39ee77130490c4d0227e5d1757fdc66af3ae6b9953053ed9aafca0160209858a7d4dd38fe10e0cb153672d08633ed6c54977aa0a6e67f9ff2f8c9d22dd7b21de08192960fd0e0da68d77c8d810db11dcaa61c725cd4092cbff76c8e1debd8d0361bb3f2e607911d45716f53067bdc0d89dd4889177765166a424e9fc0cb711201099dda213355e6639ac7eb86eca2ae0ab38b7f674f37ef8a6fcca1a6f52f55d9e1dcd631d2c3c82bba129172feb991d5af51afecd9d61a88b6832e4107480e392aed61a8644f551665ebff6b20953b635737a4f895e429fddcfe801f606fbda74b3bf6f5767d0fac14907fcfd0aa1d4c11b9e91b01d68052399b51a29f1ae6acd965109977c14a555cbcbd21ad8cb9f8853506d4bc21c01e62d61d7b21be1b923be54914e6b0a7ca84dd11f1159193e1184568a6134a6bbadf5b4df986edcf2019390ae841cfaa44435e28ce877d3dae4177992fa5d4e5c005876dbe3d1e63bec7dcc0942762b48b1ecc6c1a918409a8a72812a1e245c0c67be6e729c2b49bc6ee4d24a8f63e78e75db45655c26a9a78aff36fcd67117f26b8f654dca664b9f0e30681874cb749e1a692720078856286c2560b0292cc837933423147569350955c9571bf8941ba128fd339cb4268f46b94bc6ee203eb7026813706ea51c4f24c91866fc23a724bf2501327e6ae89c29f8db315dc28d2c7c719514036367e018f4835f63fdecd71f9bdced7132b6c4f8b13c69a517026fcd3622d67cb632320d5e7308f78f4b7cea11f6291b137851dc6cd6366f2785c71c3f237f81a7658b2a8d512b61e0ad5a4710b7b124151689fcb2116063fbff7e9115fed7b93de834970b838e49f8f8ba5f1f874c354078b5810a55ae289a56da563f1da6cd80a3757d6073fa55e016e45ac6cec1f69d871c92fd0ae9670c74249045e6b464787f9504128736309fed205f8df4d90e332908581298d9c75a3fa36ab0c3c9272e62de53ab290c803d67b696fd615c260a47bffad16746f18ba1a10a061bacbea9369693b3c042eec36bed289d7d12e52bca8aa1c2dff88ca7816498d25626d0f1e106ebb0b4a12138e00f3df5b1c2f49d98b1756e69b641b7c6353d99dbff050f4d76842c6cf1c2a4b062fc8e6336fa689b7c9d5c6b4ab8c15a5c20e514ff070a602d85ae52fa7810c22f8eeffd34a095b93342144f7a98d024216b3d68ed7bea047517bfcd83ec83febd1ba0e5858e2bdc1d8b1f7b0f89e90ccc432a3f930cb8209462e64556c5054c56ca2a85f16b32eb83a10459d13516faa4d23302b7607b9bd38dab2239ac9e9440c314433fdfb3ceadab4b4f87415ed6f240e017221f3b5f7ac196cdf54957bec42fe6893994b46de3d27dc7fb58ca88feb5b9e79cf20053d12530ac524337b22a3629bea52f40b06d3e2128f32060f9105847daed81d35f20e2002817434659baff64494c5b5c7f9216bfda38412a0f70511159dc73bb6bae1f8eaa0ef08d99bcb31f94f6be12c29c83df45926430b366c99fca3270c15fc4056398fdf3135b7779e3066a006961d1ac0ad1c83179ce39e87a96b722ec23aabc065badf3e188347a360772ca6a447abac7e6a44f0d4632d52926332e44a0a86bff5ce699fd063bdda3ffd4c41b53ded49fecec67f40599b934e16e3fd1bc063ad7026f8d71bfd4cbaf56599586774723194b692036f1b6bb242e2ffb9c600b5215b412764599476ce475c9e5b396fbcebd6be323dcf4d0048077400aac7500db41dc95fc7f7edbe7c9c2ec5ea89943fe13b42217eef530bbd023671509e12dfce4e1c1c82955d965e6a68aa66f6967dba48feda572db1f099d9a6dc4bc8edade852b5e824a06890dc48a6a6510ecaf8cf7620d757290e3166d431abecc624fa9ac2234d2eb783308ead45544910c633a94964b2ef5fbc409cb8835ac4147d384e12e0a5e13951f7de0ee13eafcb0ca0c04946d7804040c0a3cd088352424b097adb7aad1ca4495952f3e6c0158c02d2bcec33bfda69301434a84d9027ce02c0b9725dad118", "d894b86261436362e64241e61f6b3e6589daf64dc641f60570c4c0bf3b1f2ca3");
+}
+
+static MuHash3072 FromInt(unsigned char i) {
+    unsigned char tmp[32] = {i, 0};
+    return MuHash3072(tmp);
+}
+
+BOOST_AUTO_TEST_CASE(muhash_tests)
+{
+    uint256 out;
+
+    for (int iter = 0; iter < 10; ++iter) {
+        uint256 res;
+        int table[4];
+        for (int i = 0; i < 4; ++i) {
+            table[i] = m_rng.randbits<3>();
+        }
+        for (int order = 0; order < 4; ++order) {
+            MuHash3072 acc;
+            for (int i = 0; i < 4; ++i) {
+                int t = table[i ^ order];
+                if (t & 4) {
+                    acc /= FromInt(t & 3);
+                } else {
+                    acc *= FromInt(t & 3);
+                }
+            }
+            acc.Finalize(out);
+            if (order == 0) {
+                res = out;
+            } else {
+                BOOST_CHECK(res == out);
+            }
+        }
+
+        MuHash3072 x = FromInt(m_rng.randbits<4>()); // x=X
+        MuHash3072 y = FromInt(m_rng.randbits<4>()); // x=X, y=Y
+        MuHash3072 z; // x=X, y=Y, z=1
+        z *= x; // x=X, y=Y, z=X
+        z *= y; // x=X, y=Y, z=X*Y
+        y *= x; // x=X, y=Y*X, z=X*Y
+        z /= y; // x=X, y=Y*X, z=1
+        z.Finalize(out);
+
+        uint256 out2;
+        MuHash3072 a;
+        a.Finalize(out2);
+
+        BOOST_CHECK_EQUAL(out, out2);
+    }
+
+    MuHash3072 acc = FromInt(0);
+    acc *= FromInt(1);
+    acc /= FromInt(2);
+    acc.Finalize(out);
+    BOOST_CHECK_EQUAL(out, uint256{"10d312b100cbd32ada024a6646e40d3482fcff103668d2625f10002a607d5863"});
+
+    MuHash3072 acc2 = FromInt(0);
+    unsigned char tmp[32] = {1, 0};
+    acc2.Insert(tmp);
+    unsigned char tmp2[32] = {2, 0};
+    acc2.Remove(tmp2);
+    acc2.Finalize(out);
+    BOOST_CHECK_EQUAL(out, uint256{"10d312b100cbd32ada024a6646e40d3482fcff103668d2625f10002a607d5863"});
+
+    // Test MuHash3072 serialization
+    MuHash3072 serchk = FromInt(1); serchk *= FromInt(2);
+    std::string ser_exp = "1fa093295ea30a6a3acdc7b3f770fa538eff537528e990e2910e40bbcfd7f6696b1256901929094694b56316de342f593303dd12ac43e06dce1be1ff8301c845beb15468fff0ef002dbf80c29f26e6452bccc91b5cb9437ad410d2a67ea847887fa3c6a6553309946880fe20db2c73fe0641adbd4e86edfee0d9f8cd0ee1230898873dc13ed8ddcaf045c80faa082774279007a2253f8922ee3ef361d378a6af3ddaf180b190ac97e556888c36b3d1fb1c85aab9ccd46e3deaeb7b7cf5db067a7e9ff86b658cf3acd6662bbcce37232daa753c48b794356c020090c831a8304416e2aa7ad633c0ddb2f11be1be316a81be7f7e472071c042cb68faef549c221ebff209273638b741aba5a81675c45a5fa92fea4ca821d7a324cb1e1a2ccd3b76c4228ec8066dad2a5df6e1bd0de45c7dd5de8070bdb46db6c554cf9aefc9b7b2bbf9f75b1864d9f95005314593905c0109b71f703d49944ae94477b51dac10a816bb6d1c700bafabc8bd86fac8df24be519a2f2836b16392e18036cb13e48c5c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+    DataStream ss_chk{};
+    ss_chk << serchk;
+    BOOST_CHECK_EQUAL(ser_exp, HexStr(ss_chk.str()));
+
+    // Test MuHash3072 deserialization
+    MuHash3072 deserchk;
+    ss_chk >> deserchk;
+    uint256 out3;
+    serchk.Finalize(out);
+    deserchk.Finalize(out3);
+    BOOST_CHECK_EQUAL(HexStr(out), HexStr(out3));
+
+    // Test MuHash3072 overflow, meaning the internal data is larger than the modulus.
+    DataStream ss_max{"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"_hex};
+    MuHash3072 overflowchk;
+    ss_max >> overflowchk;
+
+    uint256 out4;
+    overflowchk.Finalize(out4);
+    BOOST_CHECK_EQUAL(HexStr(out4), "3a31e6903aff0de9f62f9a9f7f8b861de76ce2cda09822b90014319ae5dc2271");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

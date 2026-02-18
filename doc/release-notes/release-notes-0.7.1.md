@@ -77,7 +77,7 @@ Bug fixes
 
 * Clicking on a bdtcoin: URI on Windows should now launch Bdtcoin-Qt properly.
 
-* When running -testnet, use RPC port 17397 by default.
+* When running -testnet, use RPC port 18332 by default.
 
 * Better detection and handling of corrupt wallet.dat and blkindex.dat files.
   Previous versions would crash with a DB_RUNRECOVERY exception, this

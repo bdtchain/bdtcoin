@@ -1,5 +1,5 @@
-// Copyright (c) 2019-2020 Johir Uddin Sultan
-// Copyright (c) 2021-2022 The Bdtcoin Core developers
+// Copyright (c) 2018-2025 JUS
+// Copyright (c) 2009-2020 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -71,7 +71,7 @@ class SCOPED_LOCKABLE StdLockGuard : public std::lock_guard<StdMutex>
 {
 public:
     explicit StdLockGuard(StdMutex& cs) EXCLUSIVE_LOCK_FUNCTION(cs) : std::lock_guard<StdMutex>(cs) {}
-    ~StdLockGuard() UNLOCK_FUNCTION() {}
+    ~StdLockGuard() UNLOCK_FUNCTION() = default;
 };
 
 #endif // BDTCOIN_THREADSAFETY_H

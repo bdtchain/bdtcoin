@@ -1,11 +1,12 @@
-// Copyright (c) 2011-2018 The Bdtcoin Core developers
+// Copyright (c) 2011-2021 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BDTCOIN_QT_BDTCOINAMOUNTFIELD_H
 #define BDTCOIN_QT_BDTCOINAMOUNTFIELD_H
 
-#include <amount.h>
+#include <consensus/amount.h>
+#include <qt/bdtcoinunits.h>
 
 #include <QWidget>
 
@@ -34,13 +35,13 @@ public:
     /** If allow empty is set to false the field will be set to the minimum allowed value if left empty. **/
     void SetAllowEmpty(bool allow);
 
-    /** Set the minimum value in juss **/
+    /** Set the minimum value in satoshis **/
     void SetMinValue(const CAmount& value);
 
-    /** Set the maximum value in juss **/
+    /** Set the maximum value in satoshis **/
     void SetMaxValue(const CAmount& value);
 
-    /** Set single step in juss **/
+    /** Set single step in satoshis **/
     void setSingleStep(const CAmount& step);
 
     /** Make read-only **/
@@ -52,7 +53,7 @@ public:
     bool validate();
 
     /** Change unit used to display amount. */
-    void setDisplayUnit(int unit);
+    void setDisplayUnit(BdtcoinUnit new_unit);
 
     /** Make field empty and ready for new input. */
     void clear();
@@ -73,7 +74,7 @@ protected:
     bool eventFilter(QObject *object, QEvent *event) override;
 
 private:
-    AmountSpinBox *amount;
+    AmountSpinBox* amount{nullptr};
     QValueComboBox *unit;
 
 private Q_SLOTS:

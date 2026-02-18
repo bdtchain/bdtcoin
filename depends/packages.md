@@ -74,7 +74,6 @@ These variables may be set to override or append their default values.
     $(package)_objcxx
     $(package)_ar
     $(package)_ranlib
-    $(package)_libtool
     $(package)_nm
     $(package)_cflags
     $(package)_cxxflags
@@ -154,14 +153,17 @@ Most autotools projects can be properly staged using:
 ## Build outputs:
 
 In general, the output of a depends package should not contain any libtool
-archives. Instead, the package should output `.pc` (`pkg-config`) files where
-possible.
+archives or `.pc` (`pkg-config`) files. Instead, the package should output
+`.cmake` (CMake) files where possible.
 
 From the [Gentoo Wiki entry](https://wiki.gentoo.org/wiki/Project:Quality_Assurance/Handling_Libtool_Archives):
 
 >  Libtool pulls in all direct and indirect dependencies into the .la files it
 >  creates. This leads to massive overlinking, which is toxic to the Gentoo
 >  ecosystem, as it leads to a massive number of unnecessary rebuilds.
+
+Where possible, packages are built with Position Independent Code. Either using
+the Autotools `--with-pic` flag, or `CMAKE_POSITION_INDEPENDENT_CODE` with CMake.
 
 ## Secondary dependencies:
 
@@ -178,8 +180,8 @@ not sufficient to just say `libprimary`.
 For us, it's much easier to just link a static `libsecondary` into a shared
 `libprimary`. Especially because in our case, we are linking against a dummy
 `libprimary` anyway that we'll throw away. We don't care if the end-user has a
-static or dynamic `libseconday`, that's not our concern. With a static
-`libseconday`, when we need to link `libprimary` into our executable, there's no
+static or dynamic `libsecondary`, that's not our concern. With a static
+`libsecondary`, when we need to link `libprimary` into our executable, there's no
 dependency chain to worry about as `libprimary` has all the symbols.
 
 ## Build targets:

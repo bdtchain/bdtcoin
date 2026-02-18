@@ -1,5 +1,5 @@
-// Copyright (c) 2019Johir Uddin Sultan
-// Copyright (c) 2021-2022 The Bdtcoin Core developers
+// Copyright (c) 2018 JUS
+// Copyright (c) 2018-2025 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,6 +10,7 @@
 enum HTTPStatusCode
 {
     HTTP_OK                    = 200,
+    HTTP_NO_CONTENT            = 204,
     HTTP_BAD_REQUEST           = 400,
     HTTP_UNAUTHORIZED          = 401,
     HTTP_FORBIDDEN             = 403,
@@ -45,14 +46,13 @@ enum RPCErrorCode
     RPC_DESERIALIZATION_ERROR       = -22, //!< Error parsing or validating structure in raw format
     RPC_VERIFY_ERROR                = -25, //!< General error during transaction or block submission
     RPC_VERIFY_REJECTED             = -26, //!< Transaction or block was rejected by network rules
-    RPC_VERIFY_ALREADY_IN_CHAIN     = -27, //!< Transaction already in chain
+    RPC_VERIFY_ALREADY_IN_UTXO_SET  = -27, //!< Transaction already in utxo set
     RPC_IN_WARMUP                   = -28, //!< Client still warming up
     RPC_METHOD_DEPRECATED           = -32, //!< RPC method is deprecated
 
     //! Aliases for backward compatibility
     RPC_TRANSACTION_ERROR           = RPC_VERIFY_ERROR,
     RPC_TRANSACTION_REJECTED        = RPC_VERIFY_REJECTED,
-    RPC_TRANSACTION_ALREADY_IN_CHAIN= RPC_VERIFY_ALREADY_IN_CHAIN,
 
     //! P2P client errors
     RPC_CLIENT_NOT_CONNECTED        = -9,  //!< Bdtcoin is not connected
@@ -62,6 +62,7 @@ enum RPCErrorCode
     RPC_CLIENT_NODE_NOT_CONNECTED   = -29, //!< Node to disconnect not found in connected nodes
     RPC_CLIENT_INVALID_IP_OR_SUBNET = -30, //!< Invalid IP/Subnet
     RPC_CLIENT_P2P_DISABLED         = -31, //!< No valid connection manager instance found
+    RPC_CLIENT_NODE_CAPACITY_REACHED= -34, //!< Max number of outbound or block-relay connections already open
 
     //! Chain errors
     RPC_CLIENT_MEMPOOL_DISABLED     = -33, //!< No mempool instance found
@@ -78,6 +79,8 @@ enum RPCErrorCode
     RPC_WALLET_ALREADY_UNLOCKED     = -17, //!< Wallet is already unlocked
     RPC_WALLET_NOT_FOUND            = -18, //!< Invalid wallet specified
     RPC_WALLET_NOT_SPECIFIED        = -19, //!< No wallet specified (error when there are multiple wallets loaded)
+    RPC_WALLET_ALREADY_LOADED       = -35, //!< This same wallet is already loaded
+    RPC_WALLET_ALREADY_EXISTS       = -36, //!< There is already a wallet with the same name
 
     //! Backwards compatible aliases
     RPC_WALLET_INVALID_ACCOUNT_NAME = RPC_WALLET_INVALID_LABEL_NAME,

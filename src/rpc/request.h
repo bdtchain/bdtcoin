@@ -1,26 +1,30 @@
-// Copyright (c) 2019Johir Uddin Sultan
-// Copyright (c) 2021-2022 The Bdtcoin Core developers
+// Copyright (c) 2018 JUS
+// Copyright (c) 2018-2025 The Bdtcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BDTCOIN_RPC_REQUEST_H
 #define BDTCOIN_RPC_REQUEST_H
 
+#include <any>
+#include <optional>
 #include <string>
 
 #include <univalue.h>
+#include <util/fs.h>
 
-namespace util {
-class Ref;
-} // namespace util
+enum class JSONRPCVersion {
+    V1_LEGACY,
+    V2
+};
 
+/** JSON-RPC 2.0 request, only used in bdtcoin-cli **/
 UniValue JSONRPCRequestObj(const std::string& strMethod, const UniValue& params, const UniValue& id);
-UniValue JSONRPCReplyObj(const UniValue& result, const UniValue& error, const UniValue& id);
-std::string JSONRPCReply(const UniValue& result, const UniValue& error, const UniValue& id);
+UniValue JSONRPCReplyObj(UniValue result, UniValue error, std::optional<UniValue> id, JSONRPCVersion jsonrpc_version);
 UniValue JSONRPCError(int code, const std::string& message);
 
 /** Generate a new RPC authentication cookie and write it to disk */
-bool GenerateAuthCookie(std::string *cookie_out);
+bool GenerateAuthCookie(std::string* cookie_out, std::optional<fs::perms> cookie_perms=std::nullopt);
 /** Read the RPC authentication cookie from disk */
 bool GetAuthCookie(std::string *cookie_out);
 /** Delete RPC authentication cookie from disk */
@@ -31,27 +35,18 @@ std::vector<UniValue> JSONRPCProcessBatchReply(const UniValue& in);
 class JSONRPCRequest
 {
 public:
-    UniValue id;
+    std::optional<UniValue> id = UniValue::VNULL;
     std::string strMethod;
     UniValue params;
-    bool fHelp;
+    enum Mode { EXECUTE, GET_HELP, GET_ARGS } mode = EXECUTE;
     std::string URI;
     std::string authUser;
     std::string peerAddr;
-    const util::Ref& context;
-
-    JSONRPCRequest(const util::Ref& context) : id(NullUniValue), params(NullUniValue), fHelp(false), context(context) {}
-
-    //! Initializes request information from another request object and the
-    //! given context. The implementation should be updated if any members are
-    //! added or removed above.
-    JSONRPCRequest(const JSONRPCRequest& other, const util::Ref& context)
-        : id(other.id), strMethod(other.strMethod), params(other.params), fHelp(other.fHelp), URI(other.URI),
-          authUser(other.authUser), peerAddr(other.peerAddr), context(context)
-    {
-    }
+    std::any context;
+    JSONRPCVersion m_json_version = JSONRPCVersion::V1_LEGACY;
 
     void parse(const UniValue& valRequest);
+    [[nodiscard]] bool IsNotification() const { return !id.has_value() && m_json_version == JSONRPCVersion::V2; };
 };
 
 #endif // BDTCOIN_RPC_REQUEST_H
