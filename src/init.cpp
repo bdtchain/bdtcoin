@@ -6,7 +6,7 @@
 #include <bdtcoin-build-config.h> // IWYU pragma: keep
 
 #include <init.h>
-
+#include <signet.h>
 #include <kernel/checks.h>
 
 #include <addrman.h>
@@ -1723,6 +1723,61 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     }
 
     ChainstateManager& chainman = *Assert(node.chainman);
+
+    {
+        const Consensus::Params& consensus = chainman.GetParams().GetConsensus();
+        if (!consensus.signet_challenge.empty()) {
+            const int start = consensus.auth_activation_height;
+
+            // Get current tip height once
+            int tip_height = -1;
+            {
+                LOCK(cs_main);
+                tip_height = chainman.ActiveChain().Height();
+            }
+
+            if (tip_height >= start) {
+                for (int h = start; h <= tip_height; ++h) {
+                    const CBlockIndex* pindex = nullptr;
+                    {
+                        LOCK(cs_main);
+                        const CChain& chain = chainman.ActiveChain();
+                        if (h > chain.Height()) break;
+                        pindex = chain[h];
+                    }
+                    if (!pindex) continue;
+
+                    CBlock block;
+                    bool have_block = chainman.m_blockman.ReadBlock(block, *pindex);
+                    if (!have_block) {
+                        const bool is_pruned = WITH_LOCK(chainman.GetMutex(), return chainman.m_blockman.IsBlockPruned(*pindex));
+                        if (is_pruned) {
+                            return InitError(strprintf(
+                                _("Cannot enforce mainnet authorization: required block at height %d is pruned. "
+                                  "Please restart with -reindex-chainstate (or temporarily with -prune=0) to rebuild and re-verify."),
+                                h));
+                        } else {
+                            LogError("Failed to read block at height %d (not pruned); aborting signet re-verify\n", h);
+                            break;
+                        }
+                    }
+                    if (!CheckSignetBlockSolution(block, consensus)) {
+                        LogPrintf("Invalid mainnet solution at height %d (%s); invalidating\n",
+                                 h, pindex->GetBlockHash().ToString());
+                        BlockValidationState state;
+                        {
+                            LOCK(cs_main);
+                            chainman.ActiveChainstate().InvalidateBlock(state, const_cast<CBlockIndex*>(pindex));
+                        }
+                        if (state.IsValid()) {
+                            chainman.ActiveChainstate().ActivateBestChain(state);
+                        }
+                        break; // stop after first failure; chain will be re-evaluated forward under new rules
+                    }
+                }
+            }
+        }
+    }
 
     assert(!node.peerman);
     node.peerman = PeerManager::make(*node.connman, *node.addrman,

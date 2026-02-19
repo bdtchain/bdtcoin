@@ -1,0 +1,128 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  linux-gnu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deps
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake ninja-build pkg-config libevent-dev
+      - name: Configure
+        run: cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF
+      - name: Build
+        run: cmake --build build -j$(nproc)
+      - name: Package
+        run: |
+          mkdir -p dist/linux-gnu/bin
+          cp build/src/bdtcoind build/src/bdtcoin-cli build/src/bdtcoin-tx dist/linux-gnu/bin/ || true
+          strip dist/linux-gnu/bin/* || true
+          tar czf bdtcoin-${{ github.ref_name }}-linux-x86_64.tar.gz -C dist linux-gnu
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bdtcoin-${{ github.ref_name }}-linux-x86_64.tar.gz
+          path: bdtcoin-${{ github.ref_name }}-linux-x86_64.tar.gz
+
+  linux-musl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deps
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake ninja-build pkg-config musl-tools gperf bison
+      - name: Build depends (musl)
+        run: make -C depends -j$(nproc) HOST=x86_64-linux-musl
+      - name: Configure
+        run: cmake -S . -B build-musl -GNinja \
+          -DCMAKE_TOOLCHAIN_FILE=$PWD/depends/x86_64-linux-musl/share/toolchain.cmake \
+          -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF \
+          -DCMAKE_INSTALL_PREFIX=$PWD/dist/linux-musl
+      - name: Build+Install
+        run: cmake --build build-musl -j$(nproc) && cmake --install build-musl
+      - name: Check static
+        run: ldd dist/linux-musl/bin/bdtcoind || true
+      - name: Package
+        run: tar czf bdtcoin-${{ github.ref_name }}-linux-x86_64-musl.tar.gz -C dist linux-musl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bdtcoin-${{ github.ref_name }}-linux-x86_64-musl.tar.gz
+          path: bdtcoin-${{ github.ref_name }}-linux-x86_64-musl.tar.gz
+
+  macos-arm64:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Brew deps
+        run: |
+          brew update
+          brew install cmake ninja pkg-config zeromq sqlite qrcodegen qt@5
+      - name: Configure
+        env:
+          CMAKE_PREFIX_PATH: /opt/homebrew/opt/qt@5
+        run: cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=ON -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF
+      - name: Build
+        run: cmake --build build -j3
+      - name: Package
+        run: |
+          mkdir -p dist/macos/bin
+          cp build/src/bdtcoind build/src/bdtcoin-cli build/src/bdtcoin-tx dist/macos/bin/ || true
+          # Zip the app bundle if present
+          if [ -d "Bdtcoin-Qt.app" ]; then zip -r bdtcoin-${{ github.ref_name }}-macos-arm64-qt.zip Bdtcoin-Qt.app; fi
+          tar czf bdtcoin-${{ github.ref_name }}-macos-arm64.tar.gz -C dist macos
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bdtcoin-${{ github.ref_name }}-macos-arm64.tar.gz
+          path: bdtcoin-${{ github.ref_name }}-macos-arm64.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: ${{ hashFiles('Bdtcoin-Qt.app/Contents/Info.plist') != '' }}
+        with:
+          name: bdtcoin-${{ github.ref_name }}-macos-arm64-qt.zip
+          path: bdtcoin-${{ github.ref_name }}-macos-arm64-qt.zip
+
+  windows-cross:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deps
+        run: sudo apt-get update && sudo apt-get install -y g++-mingw-w64-x86-64 cmake ninja-build pkg-config gperf bison
+      - name: Build depends (mingw)
+        run: make -C depends -j$(nproc) HOST=x86_64-w64-mingw32
+      - name: Configure
+        run: cmake -S . -B build-win -GNinja \
+          -DCMAKE_TOOLCHAIN_FILE=$PWD/depends/x86_64-w64-mingw32/share/toolchain.cmake \
+          -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF \
+          -DCMAKE_INSTALL_PREFIX=$PWD/dist/win64
+      - name: Build+Install
+        run: cmake --build build-win -j$(nproc) && cmake --install build-win
+      - name: Package
+        run: (cd dist && zip -r ../bdtcoin-${{ github.ref_name }}-windows-x86_64.zip win64)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bdtcoin-${{ github.ref_name }}-windows-x86_64.zip
+          path: bdtcoin-${{ github.ref_name }}-windows-x86_64.zip
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [linux-gnu, linux-musl, macos-arm64, windows-cross]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Checksums
+        run: |
+          cd artifacts
+          find . -type f -maxdepth 2 -print0 | xargs -0 sha256sum > SHA256SUMS.txt
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            artifacts/**/*
+            artifacts/SHA256SUMS.txt
+          generate_release_notes: true
