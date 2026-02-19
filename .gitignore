@@ -4,7 +4,10 @@
 !/build_msvc
 
 *.pyc
-
+.idea
+/.idea
+.idea/*
+.idea/**
 # Only ignore unexpected patches
 *.patch
 !contrib/guix/patches/*.patch
