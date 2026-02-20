@@ -98,7 +98,7 @@ bool FatalError(kernel::Notifications& notifications, BlockValidationState& stat
 /** Prune block files up to a given height */
 void PruneBlockFilesManual(Chainstate& active_chainstate, int nManualPruneHeight);
 
-bool CheckProofOfProtocol(const CTransactionRef& ptx, const bool& fCheckPOP = true);
+bool CheckProofOfProtocol(const CTransactionRef& ptx);
 /**
 * Validation result for a transaction evaluated by MemPoolAccept (single or package).
 * Here are the expected fields and properties of a result depending on its ResultType, applicable to

@@ -1021,18 +1021,6 @@ bool BlockManager::ReadBlock(CBlock& block, const FlatFilePos& pos) const
         return false;
     }
 
-    // Signet only: check block solution
-    if (GetConsensus().signet_blocks && !CheckSignetBlockSolution(block, GetConsensus())) {
-        LogError("%s: Errors in block solution at %s\n", __func__, pos.ToString());
-        return false;
-    }
-
-    // Skip PoP on challenge-activated networks
-    if (!GetConsensus().signet_blocks && !CheckProofOfProtocol(block.vtx[0])) {
-        LogError("%s: Errors in block header at %s\n", __func__, pos.ToString());
-        return false;
-    }
-
     return true;
 }
 

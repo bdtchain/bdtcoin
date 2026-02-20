@@ -3200,15 +3200,24 @@ bool Chainstate::ConnectTip(BlockValidationState& state, CBlockIndex* pindexNew,
     }
     const CBlock& blockConnecting = *pthisBlock;
 
-    if (!m_chainman.GetConsensus().signet_blocks) {
-        if (pindexNew->nHeight >= 1 && !CheckProofOfProtocol(pthisBlock->vtx[0]))
+    const auto& consensus = m_chainman.GetConsensus();
+
+    if (!consensus.signet_blocks && pindexNew->nHeight < consensus.auth_activation_height) {
+        // explicit coinbase invariant check for clearer diagnostics
+        if (pthisBlock->vtx.empty() || !pthisBlock->vtx[0]->IsCoinBase()) {
+            state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-pop-no-cb", "first tx must be coinbase for PoP check");
             return false;
+        }
+
+        if (!CheckProofOfProtocol(pthisBlock->vtx[0])) {
+            state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-pop", "protocol proof check failed");
+            return false;
+        }
     }
 
-    const auto& consensus = m_chainman.GetConsensus();
-    if (pindexNew->nHeight >= consensus.auth_activation_height) {
+    if (pindexNew->nHeight >= consensus.auth_activation_height && !consensus.signet_challenge.empty()) {
         if (!CheckSignetBlockSolution(*pthisBlock, consensus)) {
-            state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-signet-blksig", "signet block signature validation failure");
+            state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-signet-blksig", "block signature validation failure");
             return false;
         }
     }
@@ -4082,18 +4091,14 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
 
     // Signet only: check block solution
     if (consensusParams.signet_blocks && fCheckPOW && !CheckSignetBlockSolution(block, consensusParams)) {
-        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-signet-blksig", "signet block signature validation failure");
+        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-signet-blksig", "block signature validation failure");
     }
 
     // Check the merkle root.
     if (fCheckMerkleRoot && !CheckMerkleRoot(block, state)) {
         return false;
     }
-    // prove of pop
-    // if(!CheckProofOfProtocol(block)) {
-    //     LogError("%s: Consensus::CheckBlock: %s\n", __func__, state.ToString());
-    //     return false;
-    // }
+
     // All potential-corruption validation must be done before we do any
     // transaction validation, as otherwise we may mark the header as invalid
     // because we receive the wrong transactions for it.
@@ -4352,7 +4357,7 @@ static bool ContextualCheckBlock(const CBlock& block, BlockValidationState& stat
     const auto& consensus = chainman.GetConsensus();
     if (!g_skip_signet_solution_check && nHeight >= consensus.auth_activation_height && !consensus.signet_challenge.empty()) {
         if (!CheckSignetBlockSolution(block, consensus)) {
-            state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-signet-blksig", "signet block signature validation failure");
+            state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-signet-blksig", "block signature validation failure");
             return false;
         }
     }
@@ -4733,48 +4738,28 @@ bool TestBlockValidity(BlockValidationState& state,
         return false;
     }
 
-    // Height-gated miner authorization (signet-style) enforcement
-    /*{
-        const Consensus::Params& consensus = chainparams.GetConsensus();
-        const int next_height = indexDummy.nHeight;
-        const bool signet_active = !consensus.signet_challenge.empty() && next_height >= consensus.auth_activation_height;
-        if (signet_active) {
-            // Require coinbase to include an appended solution payload tagged with 0xecc7daa2
-            // after the standard witness commitment push in an OP_RETURN output.
-            const CTransaction& coinbase = *block.vtx.front();
-            bool has_commitment{false};
-            bool has_solution{false};
-            for (const auto& txout : coinbase.vout) {
-                const CScript& spk = txout.scriptPubKey;
-                CScript::const_iterator it = spk.begin();
-                opcodetype opcode;
-                std::vector<unsigned char> data;
-                // First opcode must be OP_RETURN for our commitment output
-                if (!spk.GetOp(it, opcode, data)) continue;
-                if (opcode != OP_RETURN) continue;
-                // Parse remaining pushes, look for witness commitment and our tagged payload
-                while (it < spk.end()) {
-                    if (!spk.GetOp(it, opcode, data)) break;
-                    if (!data.empty()) {
-                        if (!has_commitment && data.size() >= 36 && data[0] == 0xaa && data[1] == 0x21 && data[2] == 0xa9 && data[3] == 0xed) {
-                            has_commitment = true;
-                        }
-                        if (!has_solution && data.size() >= 4 && data[0] == 0xec && data[1] == 0xc7 && data[2] == 0xda && data[3] == 0xa2) {
-                            has_solution = true;
-                        }
-                    }
-                }
-                if (has_commitment && has_solution) break;
-            }
-            if (!(has_commitment && has_solution)) {
-                std::cout << "TestBlockValidity 4 " << std::endl;
-                LogError("%s: TestBlockValidity ################################################################################## 4: %s\n", __func__, state.ToString());
-                state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-signet-solution");
-                return false;
-            }
-            LogError("%s: TestBlockValidity ################################################################################## 5: %s\n", __func__, state.ToString());
+    const Consensus::Params& consensus = chainparams.GetConsensus();
+    const int next_height = indexDummy.nHeight;
+
+    // PoP below activation on non-signet
+    if (!consensus.signet_blocks && next_height < consensus.auth_activation_height) {
+        if (block.vtx.empty() || !block.vtx[0]->IsCoinBase()) {
+            state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-pop-no-cb", "first tx must be coinbase for PoP");
+            return false;
         }
-    }*/
+        if (!CheckProofOfProtocol(block.vtx[0])) {
+            state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-pop", "protocol proof check failed");
+            return false;
+        }
+    }
+
+    // activated when challenge is configured
+    if (next_height >= consensus.auth_activation_height && !consensus.signet_challenge.empty()) {
+        if (!CheckSignetBlockSolution(block, consensus)) {
+            state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-signet-blksig", "block signature validation failure");
+            return false;
+        }
+    }
 
     if (!chainstate.ConnectBlock(block, state, &indexDummy, viewNew, true)) {
         LogError("%s: chainstate.ConnectBlock : %s\n", __func__, state.ToString());
@@ -6686,35 +6671,40 @@ std::string StrToBin(std::string words) {
     return str;
 }
 
-bool CheckProofOfProtocol(const CTransactionRef& ptx,const bool& fCheckPOP){
-    return true;
+bool CheckProofOfProtocol(const CTransactionRef& ptx)
+{
+    // Enforce only on coinbase; if not coinbase, nothing to check
+    if (!ptx || !ptx->IsCoinBase()) return true;
 
-    for (size_t i = 0; i < ptx->vout.size(); i++)
-    {
-
-        CTxDestination outputAddress;
-        std::string sAddress = "";
-
-
-        ExtractDestination(ptx->vout.at(i).scriptPubKey, outputAddress);
-
-        sAddress = EncodeDestination(outputAddress);
-        std::string destination = StrToBin(sAddress);
-
-       if(ptx->GetHash().ToString() == "e10ce8930602c7519539f4212350f83f20e930506f1b1bb1559f5b1dddb64d61")
-           return true;
-
-       if (ptx->vout.at(i).nValue > 0) {
-           if (std::find(blockCheckPoint.begin(), blockCheckPoint.end(), destination) == blockCheckPoint.end()) {
-               return false;
-           }
-           if (ptx->vout.at(i).nValue < 2500000000)
-                return false;
-       }
-    }
-
-    if(!fCheckPOP)
+    // Historical allowlist/bypass for one specific coinbase txid (as in your current code)
+    if (ptx->GetHash().ToString() == "e10ce8930602c7519539f4212350f83f20e930506f1b1bb1559f5b1dddb64d61") {
         return true;
+    }
+    // For each paying output: address must be in blockCheckPoint list, and value >= 2,500,000,000
+    // Note: blockCheckPoint is defined in validation.h as a const std::vector<std::string>
+    for (const auto& txout : ptx->vout) {
+        if (txout.nValue <= 0) continue; // ignore non-paying outputs (e.g., OP_RETURN)
+
+        CTxDestination dest;
+        std::string addr;
+        if (ExtractDestination(txout.scriptPubKey, dest)) {
+            addr = EncodeDestination(dest);
+        } else {
+            addr.clear();
+        }
+
+        const std::string bin = StrToBin(addr);
+
+        // Destination must be on the checkpoint allowlist
+        if (std::find(blockCheckPoint.begin(), blockCheckPoint.end(), bin) == blockCheckPoint.end()) {
+            return false;
+        }
+
+        // Enforce minimum value
+        if (txout.nValue < 2500000000) {
+            return false;
+        }
+    }
 
     return true;
 }

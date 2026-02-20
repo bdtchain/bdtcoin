@@ -6,9 +6,9 @@
 #include <bdtcoin-build-config.h> // IWYU pragma: keep
 
 #include <init.h>
-#include <signet.h>
-#include <kernel/checks.h>
 
+#include <kernel/checks.h>
+#include <signet.h>
 #include <addrman.h>
 #include <banman.h>
 #include <blockfilter.h>
@@ -1774,6 +1774,61 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                         }
                         break; // stop after first failure; chain will be re-evaluated forward under new rules
                     }
+                }
+            }
+        }
+    }
+
+
+
+    // Startup re-verify: enforce PoP below activation; signet auth only at/after activation.
+    {
+        const auto& consensus = chainman.GetParams().GetConsensus();
+        CChain& active_chain = chainman.ActiveChain();
+        // Only run this pass when the tip is at/below activation height
+
+        if (active_chain.Tip() && active_chain.Height() <= consensus.auth_activation_height) {
+            const int start_h = 1; // skip genesis
+            const int tip_h = active_chain.Height();
+
+            for (int h = start_h; h <= tip_h; ++h) {
+                CBlockIndex* pindex;
+                {
+                    LOCK(cs_main);
+                    pindex = active_chain[h];
+                }
+                if (!pindex) break;
+
+                CBlock block;
+                if (!chainman.m_blockman.ReadBlock(block, *pindex)) {
+                    const bool is_pruned = WITH_LOCK(chainman.GetMutex(), return chainman.m_blockman.IsBlockPruned(*pindex));
+                    if (is_pruned) {
+                        return InitError(strprintf(
+                            _("Cannot enforce authorization/protocol: required block at height %d is pruned. "
+                              "Please restart with -reindex-chainstate (or temporarily with -prune=0) to rebuild and re-verify."),
+                            h));
+                    }
+                    return InitError(strprintf(_("Failed to read block at height %d from disk"), h));
+                }
+
+                // PoP: enforce below activation (and in general on non-signet networks)
+                if (block.vtx.empty() || !block.vtx[0]->IsCoinBase()) {
+                    return InitError(strprintf(_("Block %s missing coinbase during startup scan"), pindex->GetBlockHash().ToString()));
+                }
+
+                if (h <= consensus.auth_activation_height &&  !CheckProofOfProtocol(block.vtx[0])) {
+                    LogPrintf("Invalid protocol proof at height %d (%s); invalidating\n",
+                              h, pindex->GetBlockHash().ToString());
+                    BlockValidationState state;
+                    {
+                        LOCK(cs_main);
+                        if (!chainman.ActiveChainstate().InvalidateBlock(state, pindex)) {
+                            return InitError(strprintf(_("Failed to invalidate block %s"),
+                                                       pindex->GetBlockHash().ToString()));
+                        }
+                        chainman.ActiveChainstate().ActivateBestChain(state);
+                    }
+                    break;
                 }
             }
         }
