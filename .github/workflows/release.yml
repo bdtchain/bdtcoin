@@ -11,12 +11,12 @@ permissions:
 
 env:
   BUILD_TYPE: Release
-  INSTALL_DIR: dist
+  INSTALL_DIR: release
 
 jobs:
   linux-musl-static:
     name: linux-musl-static
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
@@ -81,8 +81,8 @@ jobs:
         with:
           name: bdtcoin-linux-x86_64-musl
           path: |
-            dist/bdtcoin-linux-x86_64-musl.tar.gz
-            dist/bdtcoin-linux-x86_64-musl.tar.gz.sha256
+            release/bdtcoin-linux-x86_64-musl.tar.gz
+            release/bdtcoin-linux-x86_64-musl.tar.gz.sha256
           if-no-files-found: error
 
       - name: Publish GitHub Release (tagged)
@@ -90,12 +90,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/bdtcoin-linux-x86_64-musl.tar.gz
-            dist/bdtcoin-linux-x86_64-musl.tar.gz.sha256
+            release/bdtcoin-linux-x86_64-musl.tar.gz
+            release/bdtcoin-linux-x86_64-musl.tar.gz.sha256
 
   windows-mingw-static:
     name: windows-mingw-static
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
@@ -161,8 +161,8 @@ jobs:
         with:
           name: bdtcoin-windows-x86_64
           path: |
-            dist/bdtcoin-windows-x86_64.zip
-            dist/bdtcoin-windows-x86_64.zip.sha256
+            release/bdtcoin-windows-x86_64.zip
+            release/bdtcoin-windows-x86_64.zip.sha256
           if-no-files-found: error
 
       - name: Publish GitHub Release (tagged)
@@ -170,8 +170,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/bdtcoin-windows-x86_64.zip
-            dist/bdtcoin-windows-x86_64.zip.sha256
+            release/bdtcoin-windows-x86_64.zip
+            release/bdtcoin-windows-x86_64.zip.sha256
 
   macos:
     name: macos-${{ matrix.arch }}
@@ -233,8 +233,8 @@ jobs:
         with:
           name: bdtcoin-macos-${{ matrix.arch }}
           path: |
-            dist/bdtcoin-macos-${{ matrix.arch }}.tar.gz
-            dist/bdtcoin-macos-${{ matrix.arch }}.tar.gz.sha256
+            release/bdtcoin-macos-${{ matrix.arch }}.tar.gz
+            release/bdtcoin-macos-${{ matrix.arch }}.tar.gz.sha256
           if-no-files-found: error
 
       - name: Publish GitHub Release (tagged)
@@ -242,5 +242,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/bdtcoin-macos-${{ matrix.arch }}.tar.gz
-            dist/bdtcoin-macos-${{ matrix.arch }}.tar.gz.sha256
+            release/bdtcoin-macos-${{ matrix.arch }}.tar.gz
+            release/bdtcoin-macos-${{ matrix.arch }}.tar.gz.sha256
