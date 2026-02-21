@@ -192,33 +192,43 @@ jobs:
       - name: Install prerequisites
         run: |
           brew update
-          brew install cmake pkg-config libevent
+          brew install cmake pkg-config
 
-      - name: Configure (no wallet/gui; set deployment target)
+      - name: Build depends (arm64)
+        run: make -C depends -j"$(sysctl -n hw.logicalcpu)" HOST=arm64-apple-darwin
+
+      - name: Prepare env for static pkg-config & toolchain
         run: |
-          rm -rf build/macos-${{ matrix.arch }} $INSTALL_DIR/macos-${{ matrix.arch }}
-          cmake -S . -B build/macos-${{ matrix.arch }} \
-            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/$INSTALL_DIR/macos-${{ matrix.arch }}" \
-            -DBUILD_GUI=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF \
-            -DENABLE_WALLET=OFF \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}" \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET="11.0"
+          echo "PKG_CONFIG_LIBDIR=$GITHUB_WORKSPACE/depends/arm64-apple-darwin/lib/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/depends/arm64-apple-darwin/lib/pkgconfig" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/depends/arm64-apple-darwin/native/bin" >> $GITHUB_PATH
+
+      - name: Configure (depends toolchain, no wallet/gui)
+        run: |
+          rm -rf build/macos-arm64 $INSTALL_DIR/macos-arm64
+          cmake -S . -B build/macos-arm64 \
+          --toolchain "$GITHUB_WORKSPACE/depends/arm64-apple-darwin/toolchain.cmake" \
+          -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/$INSTALL_DIR/macos-arm64" \
+          -DBUILD_GUI=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF \
+          -DENABLE_WALLET=OFF \
+          -DBUILD_SHARED_LIBS=OFF
 
       - name: Build
-        run: cmake --build build/macos-${{ matrix.arch }} -j"$(sysctl -n hw.logicalcpu)"
+        run: cmake --build build/macos-arm64 -j"$(sysctl -n hw.logicalcpu)"
 
       - name: Install
-        run: cmake --install build/macos-${{ matrix.arch }}
+        run: cmake --install build/macos-arm64
 
       - name: Strip binaries (macOS)
         run: |
-          strip -x "$INSTALL_DIR/macos-${{ matrix.arch }}/bin/"* || true
+          strip -x "$INSTALL_DIR/macos-arm64/bin/"* || true
 
-      - name: Show dylib links (informational)
+      - name: Verify no Homebrew deps
         run: |
-          otool -L $INSTALL_DIR/macos-${{ matrix.arch }}/bin/bdtcoind || true
+          if otool -L "$INSTALL_DIR/macos-arm64/bin/bdtcoind" | grep -q "/opt/homebrew"; then
+          echo "ERROR: binary links to Homebrew libs"; exit 1
+          fi
 
       - name: Package
         run: |
@@ -229,10 +239,10 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bdtcoin-macos-${{ matrix.arch }}
+          name: bdtcoin-macos-arm64
           path: |
-            release/bdtcoin-macos-${{ matrix.arch }}.tar.gz
-            release/bdtcoin-macos-${{ matrix.arch }}.tar.gz.sha256
+            release/bdtcoin-macos-arm64.tar.gz
+            release/bdtcoin-macos-arm64.tar.gz.sha256
           if-no-files-found: error
 
       - name: Publish GitHub Release (tagged)
@@ -240,5 +250,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/bdtcoin-macos-${{ matrix.arch }}.tar.gz
-            release/bdtcoin-macos-${{ matrix.arch }}.tar.gz.sha256
+            release/bdtcoin-macos-arm64.tar.gz
+            release/bdtcoin-macos-arm64.tar.gz.sha256
