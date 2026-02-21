@@ -1771,7 +1771,45 @@ void PeerManagerImpl::MaybePunishNodeForBlock(NodeId nodeid, const BlockValidati
         // too little work.
         break;
     // The node is providing invalid data:
-    case BlockValidationResult::BLOCK_CONSENSUS:
+        case BlockValidationResult::BLOCK_CONSENSUS:{
+            const std::string reason = state.GetRejectReason();
+
+            // Immediate action for PoP failures
+            if (reason == "bad-pop") {
+                PeerRef peer{GetPeerRef(nodeid)};
+                if (peer) Misbehaving(*peer, "bad-pop");
+
+                // Option A (recommended): discourage + disconnect immediately
+                m_connman.ForNode(nodeid, [this, &peer](CNode* pnode) {
+                    if (!peer) return false;
+                    if (pnode->HasPermission(NetPermissionFlags::NoBan) || pnode->IsManualConn()) return false;
+                    LogPrintf("Disconnecting and discouraging peer=%d for bad-pop\n", pnode->GetId());
+                    MaybeDiscourageAndDisconnect(*pnode, *peer);
+                    return true;
+                });
+                return;
+
+                // Option B (aggressive): hard ban + disconnect (uncomment to use)
+                /*
+                m_connman.ForNode(nodeid, [this](CNode* pnode) {
+                    if (pnode->HasPermission(NetPermissionFlags::NoBan) || pnode->IsManualConn()) return false;
+                    LogPrintf("Banning peer=%d for bad-pop\n", pnode->GetId());
+                    if (m_banman) m_banman->Ban(pnode->addr); // use default ban time
+                    m_connman.DisconnectNode(pnode->addr);
+                    return true;
+                });
+                return;
+                */
+            }
+
+            // Keep existing behavior for other consensus-invalid cases
+            if (!via_compact_block) {
+                PeerRef peer{GetPeerRef(nodeid)};
+                if (peer) Misbehaving(*peer, message);
+                return;
+            }
+            break;
+        }
     case BlockValidationResult::BLOCK_MUTATED:
         if (!via_compact_block) {
             if (peer) Misbehaving(*peer, message);
